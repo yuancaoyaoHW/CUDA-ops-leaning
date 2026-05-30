@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Toaster, toast } from "sonner";
-import { getDashboard } from "@/api";
+import { getDashboard, saveDay, saveLibrary, saveOperator } from "@/api";
 import { filterWeeks, currentWeek, type DashboardFilters } from "@/dashboardModel";
 import type { DashboardData } from "@/types";
 import { CurrentFocusPanel } from "./CurrentFocusPanel";
 import { DashboardLayout } from "./DashboardLayout";
+import { EditDrawer, type EditTarget } from "./EditDrawer";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./LoadingState";
 import { InsightRail } from "./InsightRail";
@@ -22,6 +23,7 @@ export function DashboardApp() {
     tag: "all",
     query: "",
   });
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
 
   const refresh = useCallback(async (): Promise<boolean> => {
     try {
@@ -77,7 +79,7 @@ export function DashboardApp() {
     >
       <div className="grid gap-4">
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
-          <CurrentFocusPanel day={data.current_day} onEditDay={() => toast.info("Editor arrives in the next slice")} />
+          <CurrentFocusPanel day={data.current_day} onEditDay={(day) => setEditTarget({ type: "day", day })} />
           <ProgressOverview summary={data.summary} />
         </section>
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -92,16 +94,45 @@ export function DashboardApp() {
             <WeekPlanList
               weeks={filterWeeks(data, filters)}
               currentWeek={currentWeek(data)}
-              onEditDay={() => toast.info("Editor arrives in the next slice")}
+              onEditDay={(day) => setEditTarget({ type: "day", day })}
             />
           </section>
           <InsightRail
             data={data}
-            onEditOperator={() => toast.info("Editor arrives in the next slice")}
-            onEditLibrary={() => toast.info("Editor arrives in the next slice")}
+            onEditOperator={(name) => {
+              const operator = data.operators[name];
+              if (operator) setEditTarget({ type: "operator", name, operator });
+            }}
+            onEditLibrary={(name) => {
+              const library = data.gpu_libraries[name];
+              if (library) setEditTarget({ type: "library", name, library });
+            }}
           />
         </section>
       </div>
+      <EditDrawer
+        open={editTarget !== null}
+        target={editTarget}
+        options={data.options}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        onSaveDay={async (day, updates) => {
+          await saveDay(day, updates);
+          await refresh();
+          toast.success("Day saved");
+        }}
+        onSaveOperator={async (name, updates) => {
+          await saveOperator(name, updates);
+          await refresh();
+          toast.success("Operator saved");
+        }}
+        onSaveLibrary={async (name, updates) => {
+          await saveLibrary(name, updates);
+          await refresh();
+          toast.success("Library saved");
+        }}
+      />
       <Toaster richColors position="bottom-right" />
     </DashboardLayout>
   );
