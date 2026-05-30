@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "./App";
 
@@ -57,5 +58,41 @@ test("shows an error state when dashboard data cannot load", async () => {
   await waitFor(() => {
     expect(screen.getByText("Unable To Load Dashboard")).toBeInTheDocument();
   });
+  expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(screen.getByText(/local dashboard server/i)).toBeInTheDocument();
+});
+
+test("refresh keeps loaded dashboard visible when refresh fails", async () => {
+  fetchMock
+    .mockResolvedValueOnce({ ok: true, json: async () => dashboardPayload })
+    .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) });
+
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { name: "大模型推理框架/加速 8 周计划" })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+  expect(screen.getByRole("heading", { name: "大模型推理框架/加速 8 周计划" })).toBeInTheDocument();
+  expect(screen.queryByText("Unable To Load Dashboard")).not.toBeInTheDocument();
+});
+
+test("refresh can load new dashboard data", async () => {
+  fetchMock
+    .mockResolvedValueOnce({ ok: true, json: async () => dashboardPayload })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ...dashboardPayload, meta: { title: "Updated Plan" } }),
+    });
+
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { name: "大模型推理框架/加速 8 周计划" })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
+
+  expect(await screen.findByRole("heading", { name: "Updated Plan" })).toBeInTheDocument();
 });

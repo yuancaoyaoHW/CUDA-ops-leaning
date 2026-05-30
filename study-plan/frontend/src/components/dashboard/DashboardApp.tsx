@@ -11,13 +11,16 @@ export function DashboardApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<boolean> => {
     try {
       setError(null);
       const next = await getDashboard();
       setData(next);
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load dashboard data");
+      const message = err instanceof Error ? err.message : "Unable to load dashboard data";
+      setError(message);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -35,13 +38,14 @@ export function DashboardApp() {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <main className="mx-auto max-w-7xl px-5 py-6 sm:px-7">
-        <EmptyState title="Unable To Load Dashboard">
-          <p>{error}</p>
+        <EmptyState title="Unable To Load Dashboard" role="alert">
+          <p>{error || "Unable to load dashboard data"}</p>
           <p className="mt-2">Start the local dashboard server before editing or refreshing data.</p>
         </EmptyState>
+        <Toaster richColors position="bottom-right" />
       </main>
     );
   }
@@ -50,7 +54,13 @@ export function DashboardApp() {
     <DashboardLayout
       title={data.meta.title || "Study Plan"}
       onRefresh={() => {
-        void refresh().then(() => toast.success("Data refreshed"));
+        void refresh().then((ok) => {
+          if (ok) {
+            toast.success("Data refreshed");
+          } else {
+            toast.error("Unable to refresh dashboard data");
+          }
+        });
       }}
     >
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
