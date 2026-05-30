@@ -10,3 +10,9 @@ cutlass/
 .worktrees/
 
 study-plan/*.bak
+
+# Downloaded resources (papers, repos, etc.)
+resources/papers/
+resources/repos/
+resources/tutorials/
+resources/manuals/
