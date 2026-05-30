@@ -278,7 +278,7 @@ week0:
     notes: ''
 week1:
   day01:
-    title: 仓库校准 + Nsight Compute WSL2 验证
+    title: 校准 + Nsight Compute WSL2 验证（warmup gate）
     date: '2026-06-01'
     status: not_started
     daily_check: 0
@@ -287,68 +287,36 @@ week1:
     - docs
     tasks:
       audit_existing_kernels: false
-      map_operator_maturity: false
       validate_ncu_wsl2: false
+      reread_tutorial_01: false
     artifacts:
       docs: false
     verification: ''
     weaknesses: GPU 加速库、算子能力薄弱；当前进度记录和真实产物不同步。
-    next_fix: 先确认 ncu 是否能采集硬件计数器，再进入 row_softmax 闭环。
+    next_fix: 先确认 ncu 能采集硬件计数器，再进入 reduction-normalization 主题块。
     notes: ''
     phase: review
+    slots:
+      main: '校准仓库 + Nsight Compute WSL2 验证（重跑已有 row_max/row_sum 一次以校准）'
+      depth: '跑通 row_max/row_sum 的 ncu，确认 memory-bound 结论可复现'
+      output: '重读 Triton Tutorial 01（vector add）作为风格基线 + 算子成熟度审计表'
   day02:
-    title: row_softmax PyTorch reference + Triton skeleton
+    title: row_softmax baseline + tests + bench（reduction 主题开篇）
     date: '2026-06-02'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    tasks:
-      write_reference: false
-      write_triton_skeleton: false
-      record_addressing: false
-    artifacts:
-      reference: false
-      implementation: false
-      note: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: row_softmax
-    phase: reference
-  day03:
-    title: row_softmax correctness tests
-    date: '2026-06-03'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    tasks:
-      aligned_tests: false
-      non_aligned_tests: false
-      dtype_and_mask_tests: false
-    artifacts:
-      tests: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: row_softmax
-    phase: tests
-  day04:
-    title: row_softmax benchmark
-    date: '2026-06-04'
     status: not_started
     daily_check: 0
     jd_tags:
     - kernel
     - perf
     tasks:
-      write_benchmark: false
-      compare_torch: false
-      compute_gbs: false
+      write_reference: false
+      implement_softmax: false
+      add_tests: false
+      add_benchmark: false
     artifacts:
+      reference: false
+      implementation: false
+      tests: false
       benchmark: false
     verification: ''
     weaknesses: ''
@@ -356,8 +324,71 @@ week1:
     notes: ''
     operator: row_softmax
     phase: benchmark
+    slots:
+      main: 'row_softmax baseline + tests（复用 row_max/row_sum 的 reduction 砖块）+ bench'
+      depth: 'tile size sweep（BLOCK_SIZE 256/512/1024/2048）→ 出 GB/s 表'
+      output: 'Triton Tutorial 02 §1（naive vs fused）+ PyTorch SoftMax.cu 走读'
+  day03:
+    title: masked_softmax（attention mask 应用 + reduction 风格对比）
+    date: '2026-06-03'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      implement_masked_softmax: false
+      add_tests: false
+      add_benchmark: false
+      reduction_strategy_compare: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: masked_softmax
+    phase: benchmark
+    slots:
+      main: 'masked_softmax 实现 + tests（causal mask + padding mask）+ bench'
+      depth: 'warp shuffle vs shared-mem reduction 两种实现路径对比 GB/s'
+      output: 'Triton Tutorial 02 §2（autotune + heuristics）+ vLLM softmax 走读'
+  day04:
+    title: online_softmax（→ W4 FlashAttention 铺路）
+    date: '2026-06-04'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      derive_online_softmax_math: false
+      implement_online_softmax: false
+      add_tests: false
+      add_benchmark: false
+      add_profile_note: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: online_softmax
+    phase: profile
+    slots:
+      main: 'online softmax 数学推导 + 单 pass 实现 + tests + bench + ncu profile'
+      depth: 'numerical stability：fp16 overflow / bf16 accumulate 对比 + max-rescale 误差分析'
+      output: 'Triton Tutorial 02 ncu 段 + 5 道面经题（数值稳定 / launch-bound 判别 / occupancy）'
   day05:
-    title: row_softmax Nsight Compute
+    title: rmsnorm baseline + tests + bench（normalization 主题开篇）
     date: '2026-06-05'
     status: not_started
     daily_check: 0
@@ -365,40 +396,58 @@ week1:
     - kernel
     - perf
     tasks:
-      isolate_one_kernel: false
-      run_ncu: false
-      write_bottleneck_note: false
+      write_reference: false
+      implement_rmsnorm: false
+      add_tests: false
+      add_benchmark: false
     artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: rmsnorm
+    phase: benchmark
+    slots:
+      main: 'rmsnorm reference + Triton 实现 + tests + bench'
+      depth: 'vectorized load（tl.load 4xfp16 pack）vs naive load 对比 GB/s'
+      output: 'Triton Tutorial 05 forward 段（Welford 均值/方差）走读笔记'
+  day06:
+    title: layernorm + 与 RMSNorm 对比（normalization 收口）
+    date: '2026-06-06'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      implement_layernorm: false
+      add_tests: false
+      add_benchmark: false
+      add_profile_note: false
+      compare_rmsnorm: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
       profile: false
       note: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
-    operator: row_softmax
+    operator: layernorm
     phase: profile
-  day06:
-    title: softmax 闭卷复现 + note
-    date: '2026-06-06'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    - docs
-    tasks:
-      closed_book_kernel: false
-      explain_masking: false
-      finalize_note: false
-    artifacts:
-      note: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: row_softmax
-    phase: note
+    slots:
+      main: 'layernorm 实现 + tests + bench + ncu profile'
+      depth: '双 ncu profile（rmsnorm vs layernorm）→ bottleneck 与 compute/memory ratio 对比表'
+      output: 'Triton Tutorial 05 backward 段（locked atomic add）阅读笔记 + vLLM layernorm.cu 走读'
   day07:
-    title: Week 1 周检 + STAR
+    title: Week 1 周检 + STAR + reduction-norm 家族对比表
     date: '2026-06-07'
     status: not_started
     daily_check: 0
@@ -406,8 +455,8 @@ week1:
     jd_tags:
     - interview
     tasks:
-      handwrite_softmax: false
-      oral_mock: false
+      handwrite_softmax_oral: false
+      family_compare_table: false
       topk_heap_drill: false
       cpp_raii_move_review: false
       star_metrics_entry: false
@@ -421,6 +470,10 @@ week1:
     star_filled: false
     algo_drill_done: false
     cpp_drill_done: false
+    slots:
+      main: '口头闭卷 mock：softmax / online softmax / rmsnorm / layernorm 推导'
+      depth: 'reduction-normalization 家族对比表（GB/s / arithmetic intensity / bottleneck）'
+      output: 'TopK / RAII drill + STAR 段（baseline/metric/improvement/failure/badcase）'
 week2:
   day08:
     title: RMSNorm reference + Triton 实现
