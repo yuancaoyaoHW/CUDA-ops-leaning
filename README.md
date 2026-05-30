@@ -1,6 +1,19 @@
-# 8 周 AI Infra 求职学习计划
+# llm-kernel-lab
 
-目标：2 个月内具备字节/腾讯/小红书/美团等公司 AI Infra 岗位的面试能力。
+LLM 推理框架 / 加速学习仓库。每天的入口是 `study-plan/run.py`：
+
+```bash
+python study-plan/run.py today          # 看今天该做什么
+python study-plan/run.py day 5 show     # 看 Day 5 的状态
+python study-plan/run.py day 5 done     # 跑 strict verify，更新 yaml
+python study-plan/run.py week 1 check   # 周检：strict + STAR + drill
+```
+
+进度真理源：`study-plan/progress.yaml`。所有 artifact 字段由 `verify` 引擎写回，**不要手动改**；要改状态就去补真文件，然后 `run.py done` 触发 verify。
+
+8 周计划：[study-plan/inference-acceleration-plan.md](study-plan/inference-acceleration-plan.md)。
+
+---
 
 ## 目标岗位方向
 

@@ -35,6 +35,14 @@ pytest tests/test_vector_add.py
 
 After changing setup scripts, run or ask the user to run the affected script directly. Explain what the script modifies before running it.
 
+After changing operator artifacts (kernel / test / benchmark / profile / note), run:
+
+```bash
+python study-plan/progress.py verify --operator <op>
+```
+
+Then commit the `study-plan/progress.yaml` diff together with the artifact change.
+
 ## Code Style
 
 - Shell scripts must use `set -euo pipefail`.

@@ -124,3 +124,29 @@ python study-plan/dashboard.py --build
 | W4 结束 | 能讲清 softmax/RMSNorm/GEMM/attention 的性能瓶颈；有 FlashAttention 或 decode attention toy |
 | W6 结束 | 能讲清 vLLM/SGLang/TensorRT-LLM 的 scheduler、KV cache、PagedAttention、Mooncake/RBG、LongCat/MoE、PD/EPD 分离 |
 | W8 结束 | README、benchmark 图、系统设计稿、腾讯/小红书/美团定制问答、coding drill 和模型基础兜底齐全 |
+
+---
+
+## Daily driver
+
+```bash
+python study-plan/run.py day N                  # 信息屏
+python study-plan/run.py day N tests            # 跑当天 operator 的 pytest
+python study-plan/run.py day N bench            # 跑当天 operator 的 benchmark
+python study-plan/run.py day N profile          # 跑当天 operator 的 ncu/nsys
+python study-plan/run.py day N done             # strict verify + 写回 yaml
+python study-plan/run.py week N check           # 周检：strict + STAR + drill
+```
+
+## Verify 引擎
+
+```bash
+python study-plan/progress.py verify --operator row_softmax --strict
+python study-plan/progress.py verify --all --write
+python study-plan/progress.py drill              # STAR / algo / cpp drill 总览
+python study-plan/progress.py status --day 5     # 单日详细状态
+```
+
+`progress.yaml` 是真理源；artifact / status / 周检 hook 字段由 verify 写回。
+用户笔记字段（daily_check, weaknesses, next_fix, notes, weekly_check_score）可手动改，
+也可走 dashboard 编辑界面。
