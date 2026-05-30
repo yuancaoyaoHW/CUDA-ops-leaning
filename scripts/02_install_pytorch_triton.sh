@@ -17,6 +17,7 @@ OP_DEV_PACKAGES=(
   cmake
   packaging
   psutil
+  pyyaml
 )
 
 if ! command -v conda >/dev/null 2>&1; then
@@ -61,6 +62,7 @@ for package in (
     "cmake",
     "packaging",
     "psutil",
+    "pyyaml",
 ):
     try:
         print(f"{package}: {metadata.version(package)}")
