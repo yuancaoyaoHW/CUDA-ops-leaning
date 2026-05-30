@@ -1,99 +1,126 @@
-# 8 周 AI Infra 求职学习计划
+# 8 周大模型推理框架/加速学习计划
 
-目标：2 个月内具备字节/腾讯/小红书/美团等公司 AI Infra 岗位的面试能力。
+目标：以腾讯混元大模型推理加速、小红书大模型推理框架研发、美团大模型推理岗位为第一目标，补强 GPU 加速库、算子开发、推理框架和性能分析能力。
 
-## 目标岗位方向
+## 主线定位
 
-- 大模型推理优化工程师
-- AI 异构计算优化
-- 大模型推理框架研发
-- 大模型压缩算法
+本计划不再按泛 AI Infra 覆盖推进，而是围绕一个可展示的学习项目组织：
 
-## 时间分配
+> LLM Inference Performance Lab：从 Triton/CUDA 算子到 KV cache、PagedAttention、continuous batching、量化推理和 Nsight 性能分析的推理加速实验室。
 
-| 维度 | 占比 | 目标 |
+## 能力权重
+
+| 方向 | 权重 | 目标 |
 |------|------|------|
-| Kernel 开发 | 25% | 闭卷手写 reduction/softmax/GEMM/FlashAttention |
-| 推理系统 | 25% | vLLM/SGLang 源码级理解，能讲清调度/KV Cache/batching |
-| 分布式训练/推理 | 15% | TP/PP/DP/EP 通信分析，能画图算量 |
-| 模型压缩 | 10% | INT4/FP8 量化原理和 kernel 实现 |
-| 面试准备 | 25% | 系统设计、论文串讲、项目包装、LeetCode |
+| GPU 加速库/算子 | 45% | Triton、CUDA extension、cuBLAS/PyTorch GEMM、CUTLASS、FlashAttention/Decode Attention、INT4 dequant |
+| 推理框架/Serving | 30% | vLLM/SGLang/TensorRT-LLM 的 scheduler、KV cache、PagedAttention、continuous batching、PD 分离 |
+| 性能分析 | 15% | benchmark、Nsight Systems/Compute、latency/throughput、roofline 和瓶颈判断 |
+| 量化压缩 | 7% | INT4/FP8、weight-only、GPTQ/AWQ、推理落地 tradeoff |
+| 面试包装 | 3% 前期，后期拉高 | README、benchmark 图、源码走读图、STAR、mock interview |
 
-## 评估体系
+## JD 能力标签
 
-### 三层检验
+每天在 `progress.yaml` 里记录 `jd_tags`，用于自动分析覆盖度：
 
-| 层级 | 频率 | 方式 | 通过标准 |
-|------|------|------|----------|
-| 日检 | 每天结束 | 闭卷手写 + 口述录音 | 15 分钟内不看资料写出/讲出当天核心内容 |
-| 周检 | 每周日 | 模拟面试 45 分钟 | 7 题随机抽取，总分 ≥ 15/21 |
-| 阶段检 | 第 2/4/6/8 周末 | 完整 mock interview 2 小时 | 评分 ≥ 70/100 |
+- `kernel`: CUDA/Triton/CUTLASS/算子实现
+- `framework`: vLLM/SGLang/TensorRT-LLM/ONNX Runtime
+- `serving`: KV cache、scheduler、batching、PD 分离、容错
+- `perf`: benchmark、Nsight、吞吐/延迟、瓶颈分析
+- `quant`: INT4/FP8/GPTQ/AWQ/压缩
+- `docs`: 源码走读、系统图、README、技术文档
+- `interview`: mock、系统设计、项目 STAR、岗位问答
 
-### 日检操作
+## 面经补强项
 
-每天学完后关掉所有资料，打开空文件限时完成：
-- Kernel 类：15 分钟写出完整可运行代码
-- 概念类：5 分钟口述录音，能回答一个"为什么"追问
-- 系统设计类：10 分钟画出架构图 + 标注数据流
+基于腾讯、小红书、美团 AI Infra/推理岗位面经和公开技术材料，计划额外纳入 5 个面试风险项：
 
-不通过处理：第二天上午补课，不往下推进。连续 2 天不通过则当周计划后移 1 天。
+| 风险项 | 加入计划的位置 |
+|--------|----------------|
+| 算法/C++ 基础薄弱 | 每周周检固定做 2 个 drill：TopK、LRU、merge k sorted arrays、最长公共子串、RAII、smart pointer、cache locality |
+| 项目指标讲不清 | 每周 STAR 增加 baseline、metric、improvement、failure、badcase 字段 |
+| 线上排障经验不足 | W5 增加 TTFT/TPOT/ITL/P99/GPU util/KV usage/prefix hit playbook |
+| 小红书框架特色 | W6 增加 SGLang、Mooncake/external KVCache、RBG、KV Router、dynamic PD |
+| 美团系统特色 | W6/W8 增加 LongCat、MoE routing、TopK fusion、N-gram cache、PDL、AllReduce/RMSNorm fusion |
 
-### 周检评分
+## 8 周安排
 
-每题 0-3 分：
-- 0：完全不会或严重错误
-- 1：知道方向但细节模糊
-- 2：核心讲清楚，1-2 个细节不确定
-- 3：清晰准确，能主动延伸 tradeoff
+完整 56 天计划见 [inference-acceleration-plan.md](./inference-acceleration-plan.md)。
+`progress.yaml` 是进度分析的数据源。旧的 `week1/`、`week2/` 已迁移到 [`archive/`](./archive/)，仅作主题参考（speculative decoding 推导、FlashAttention 数学等），不要按旧日程执行。
 
-### 阶段检评分表
+## 硬件与执行约束
 
-| 环节 | 时长 | 满分 |
-|------|------|------|
-| 项目深挖（STAR） | 20min | 20 |
-| 系统设计 | 25min | 20 |
-| 八股/原理（5题） | 15min | 20 |
-| 手撕 kernel | 20min | 20 |
-| 算法题 | 20min | 20 |
-| **总计** | **100min** | **100** |
+- GPU: RTX 4060 Laptop 8GB / WSL2 / Triton 3.7 / PyTorch 2.12 / CUDA 12.6
+- Day 1 必须验证 `ncu --set full` 在 WSL2 下的可用性，备选方案见 [inference-acceleration-plan.md](./inference-acceleration-plan.md)
+- W5-W6 框架学习以源码阅读 + toy simulation 为主，避免本地跑 7B serving
+- Day 21 / Day 28 / Day 49 为 buffer day，用于消化前一周延迟任务
+- 每周周检写一段 STAR 素材到 [`../notes/star-weekly.md`](../notes/star-weekly.md)，含 baseline/target/final/badcase
+- 每周周检完成 1 道算法题 + 1 道 C++/系统基础题（drill 表见 [inference-acceleration-plan.md](./inference-acceleration-plan.md)）
 
-及格线：70 分。
+| 周 | 主线 | 必交付 |
+|----|------|--------|
+| W1 | Triton 基础算子闭环 | `row_softmax` 完整闭环：reference、implementation、tests、benchmark、profile、note |
+| W2 | RMSNorm + CUDA extension | fused RMSNorm + 最小 C++/CUDA extension |
+| W3 | GEMM / cuBLAS / CUTLASS | GEMM benchmark、CUTLASS profiler 笔记、roofline 表 |
+| W4 | Attention kernel | FlashAttention forward toy 或 decode attention toy |
+| W5 | KV cache / PagedAttention / 排障 | paged KV cache toy、scheduler toy、spec decode/N-gram、线上排障 playbook |
+| W6 | vLLM/SGLang/TensorRT-LLM | scheduler、Mooncake/RBG/external KV、LongCat/MoE/fusion、PD/EPD 分离文档 |
+| W7 | 量化推理加速 | INT4 dequant 或 weight-only GEMV benchmark |
+| W8 | 项目包装 + mock | README、benchmark 图、三家公司 JD 问答、系统设计、coding/model basics |
 
-### 硬性里程碑
+## 算子完成标准
 
-| 周 | 必须达成 |
-|----|----------|
-| W1 | 5 个 kernel 有 benchmark；闭卷写 reduction + softmax |
-| W2 | FlashAttention 通过正确性测试；vLLM 流程图完成 |
-| W3 | INT4 dequant kernel 有 benchmark；SGLang 对比文档 |
-| W4 | Mini inference engine 可运行 或 PR 已提交 |
-| W5 | GitHub repo README 有完整 benchmark 图表 |
-| W6 | Mock interview ≥ 60 分 |
-| W7 | Mock interview ≥ 70 分；论文 5 分钟串讲 |
-| W8 | Mock interview ≥ 75 分；简历定稿；开始投递 |
+每个算子按 6 项成熟度评分：
 
-## 每日进度记录模板
+| 项 | 要求 |
+|----|------|
+| Reference | 有 PyTorch reference |
+| Implementation | 有最小 Triton/CUDA/CUTLASS 实现 |
+| Tests | 覆盖 aligned/non-aligned、dtype、mask、边界和 shape error |
+| Benchmark | 有 warmup/sync，内存型报 GB/s，GEMM 报 TFLOPS |
+| Profile | 有 Nsight Systems 或 Nsight Compute 结论 |
+| Note | 记录 correctness、performance、bottleneck、next experiment |
 
-```markdown
-## Day X - [日期]
-- [ ] 上午任务完成
-- [ ] 下午任务完成
-- [ ] 晚上任务完成
-- [ ] 日检通过
-- 日检得分: __/3
-- 卡点记录:
-- 明日补课项:
+少于 6 项时不要说“算子完成”。例如 tests 通过但没有 benchmark，只能说 correctness stage complete。
+
+## GPU 加速库覆盖标准
+
+进度系统会跟踪这些能力是否有证据：
+
+| 能力 | 证据 |
+|------|------|
+| Triton | 至少 3 个 kernel 完整闭环 |
+| CUDA extension | 至少 1 个可 pytest 验证的 C++/CUDA op |
+| cuBLAS/PyTorch GEMM | GEMM benchmark 表，能解释 shape 和 dtype 对性能的影响 |
+| CUTLASS | profiler 或最小 GEMM 实验笔记 |
+| Nsight Systems | 至少 1 个 timeline/launch overhead 分析 |
+| Nsight Compute | 至少 2 个单 kernel profile 结论 |
+| TensorRT-LLM concepts | inflight batching、paged KV、plugin/kernel 思路对比文档 |
+
+## 进度分析
+
+命令：
+
+```bash
+python study-plan/progress.py
+python study-plan/progress.py week
+python study-plan/progress.py history
+python study-plan/progress.py analyze
+python study-plan/dashboard.py --build
 ```
 
-## 目录结构
+`progress.py analyze` 会输出：
 
-```
-week1/  - CUDA Kernel 基础 + Roofline + 分布式概念
-week2/  - FlashAttention + 推理系统入门 + 量化基础
-week3/  - 推理系统深入 + 项目启动
-week4/  - 项目产出 + 开源贡献
-week5/  - 分布式深入 + 项目完善
-week6/  - 面试冲刺（系统设计 + 论文）
-week7/  - Mock Interview + 项目包装
-week8/  - 投递 + 查漏补缺
-```
+- JD 标签覆盖度
+- 算子成熟度
+- GPU 加速库覆盖度
+- 当前风险项
+- 下一步建议
+
+## 验收节奏
+
+| 阶段 | 最低通过标准 |
+|------|--------------|
+| W2 结束 | 2 个 LLM 推理相关算子有 tests + benchmark；至少 1 个有 profile |
+| W4 结束 | 能讲清 softmax/RMSNorm/GEMM/attention 的性能瓶颈；有 FlashAttention 或 decode attention toy |
+| W6 结束 | 能讲清 vLLM/SGLang/TensorRT-LLM 的 scheduler、KV cache、PagedAttention、Mooncake/RBG、LongCat/MoE、PD/EPD 分离 |
+| W8 结束 | README、benchmark 图、系统设计稿、腾讯/小红书/美团定制问答、coding drill 和模型基础兜底齐全 |

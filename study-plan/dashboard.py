@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""
-生成可视化前端 HTML 并启动本地服务器查看。
+"""Build and serve an editable study-plan dashboard."""
 
-用法:
-    python3 dashboard.py          # 生成 dashboard.html 并在浏览器打开
-    python3 dashboard.py --serve  # 启动本地服务器（端口 8765）
-    python3 dashboard.py --build  # 只生成 HTML，不打开
-"""
+from __future__ import annotations
 
+import html
 import json
 import sys
-import os
-from pathlib import Path
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-import webbrowser
 import threading
+import webbrowser
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 try:
     import yaml
@@ -22,768 +19,458 @@ except ImportError:
     print("需要安装 PyYAML: pip install pyyaml")
     sys.exit(1)
 
-PROGRESS_FILE = Path(__file__).parent / "progress.yaml"
-OUTPUT_HTML = Path(__file__).parent / "dashboard.html"
 
-DAY_TITLES = {
-    1: "Parallel Reduction",
-    2: "Online Softmax",
-    3: "Tiled GEMM V1",
-    4: "GEMM V2 + Double Buffering",
-    5: "Fused RMSNorm",
-    6: "Triton GEMM + Roofline",
-    7: "周复习 + 周检",
-    8: "FlashAttention 数学",
-    9: "FlashAttention Triton",
-    10: "vLLM Scheduler",
-    11: "Continuous Batching",
-    12: "Speculative Decoding",
-    13: "量化 INT4/FP8",
-    14: "周复习 + 阶段检",
-    15: "SGLang RadixAttention",
-    16: "PD 分离",
-    17: "GQA/MQA/MLA",
-    18: "项目选型",
-    19: "项目开发: Scheduler",
-    20: "项目开发: Model",
-    21: "周复习 + 周检",
-    22: "Paged Attention 实现",
-    23: "Continuous Batching 实现",
-    24: "开源 PR: 调研",
-    25: "开源 PR: 实现",
-    26: "项目完善",
-    27: "项目 README",
-    28: "周复习 + 阶段检",
-    29: "Benchmark 完善",
-    30: "Nsight 深入分析",
-    31: "项目优化",
-    32: "系统设计 #1-2",
-    33: "系统设计 #3",
-    34: "技术博客",
-    35: "周复习 + 周检",
-    36: "系统设计专项",
-    37: "论文串讲",
-    38: "模型压缩部署",
-    39: "Mock Interview #1",
-    40: "论文串讲 #2",
-    41: "Mock Interview #2",
-    42: "周复习 + 阶段检",
-    43: "Mock #3 + 项目包装",
-    44: "Mock #4 + 补课",
-    45: "Mock #5 + Demo",
-    46: "Mock #6 + 简历",
-    47: "Mock #7 + 博客",
-    48: "系统设计全天",
-    49: "周检 + 阶段检",
-    50: "投递 + 字节准备",
-    51: "Mock 字节风格",
-    52: "腾讯准备",
-    53: "小红书准备",
-    54: "美团准备",
-    55: "薄弱点复习",
-    56: "最终 Mock",
-}
-
-MILESTONES = [
-    {"day": 7, "text": "5 个 kernel 有 benchmark；闭卷写 reduction + softmax"},
-    {"day": 14, "text": "FlashAttention 通过正确性测试；vLLM 流程图完成"},
-    {"day": 21, "text": "INT4 dequant kernel 有 benchmark；SGLang 对比文档"},
-    {"day": 28, "text": "Mini inference engine 可运行 或 PR 已提交"},
-    {"day": 35, "text": "GitHub repo README 有完整 benchmark 图表"},
-    {"day": 42, "text": "Mock interview ≥ 60 分"},
-    {"day": 49, "text": "Mock interview ≥ 70 分；论文 5 分钟串讲"},
-    {"day": 56, "text": "Mock interview ≥ 75 分；简历定稿；开始投递"},
+BASE_DIR = Path(__file__).parent
+PROGRESS_FILE = BASE_DIR / "progress.yaml"
+OUTPUT_HTML = BASE_DIR / "dashboard.html"
+CSS_FILE = BASE_DIR / "dashboard.css"
+JS_FILE = BASE_DIR / "dashboard.js"
+TAG_ORDER = ["kernel", "framework", "serving", "perf", "quant", "docs", "interview"]
+STATUS_OPTIONS = ["not_started", "in_progress", "done", "blocked", "skipped"]
+OPERATOR_STATUS_OPTIONS = [
+    "not_started",
+    "correctness_stage",
+    "benchmark_stage",
+    "profile_stage",
+    "complete",
+    "blocked",
 ]
+LIBRARY_STATUS_OPTIONS = ["not_started", "in_progress", "complete", "blocked"]
+TEXT_DAY_FIELDS = ["status", "date", "verification", "weaknesses", "next_fix", "notes"]
+INT_DAY_FIELDS = ["daily_check", "weekly_check_score", "stage_check_score"]
+SAFE_ORIGINS = {"http://127.0.0.1", "http://localhost"}
 
 
-def load_progress():
-    with open(PROGRESS_FILE) as f:
+def load_progress() -> dict[str, Any]:
+    with open(PROGRESS_FILE, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def transform_data(raw):
-    """把 YAML 数据转成前端需要的 JSON 结构"""
-    weeks = []
-    daily_checks = []
-    weekly_checks = []
-    stage_checks = []
+def save_progress(data: dict[str, Any]) -> None:
+    with open(PROGRESS_FILE, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
 
+
+def truthy(value: Any) -> bool:
+    return value is True or value == "true" or value == "complete"
+
+
+def get_day_location(day_num: int) -> tuple[str, str]:
+    if day_num < 1 or day_num > 56:
+        raise ValueError("day must be between 1 and 56")
+    week_num = (day_num - 1) // 7 + 1
+    return f"week{week_num}", f"day{day_num:02d}"
+
+
+def get_all_days(data: dict[str, Any]) -> list[dict[str, Any]]:
+    days: list[dict[str, Any]] = []
     for week_num in range(1, 9):
-        week_key = f"week{week_num}"
-        week_data = raw.get(week_key, {})
-        if not week_data:
-            continue
+        week_data = data.get(f"week{week_num}", {})
+        for day_num in range((week_num - 1) * 7 + 1, week_num * 7 + 1):
+            day = dict(week_data.get(f"day{day_num:02d}", {}))
+            day["num"] = day_num
+            day["week"] = week_num
+            days.append(day)
+    return days
 
-        days = []
-        for day_key in sorted(week_data.keys(), key=lambda x: int(x.replace("day", ""))):
-            d = week_data[day_key]
-            day_num = int(day_key.replace("day", ""))
-            tasks = d.get("tasks", {})
-            tasks_done = sum(1 for v in tasks.values() if v)
-            tasks_total = len(tasks)
 
-            day_info = {
-                "num": day_num,
-                "title": DAY_TITLES.get(day_num, f"Day {day_num}"),
-                "date": d.get("date", ""),
-                "status": d.get("status", "not_started"),
-                "daily_check": d.get("daily_check", 0),
-                "tasks_done": tasks_done,
-                "tasks_total": tasks_total,
-                "notes": d.get("notes", ""),
-            }
-            days.append(day_info)
+def pct(done: int, total: int) -> float:
+    return done / total * 100 if total else 0.0
 
-            if d.get("daily_check", 0) > 0:
-                daily_checks.append({"day": day_num, "score": d["daily_check"]})
 
-            if d.get("weekly_check_score"):
-                weekly_checks.append({"day": day_num, "week": week_num, "score": d["weekly_check_score"]})
+def count_truthy(values: dict[str, Any] | None) -> tuple[int, int]:
+    values = values or {}
+    return sum(1 for value in values.values() if truthy(value)), len(values)
 
-            if d.get("stage_check_score"):
-                stage_checks.append({"day": day_num, "week": week_num, "score": d["stage_check_score"]})
 
-        weeks.append({"num": week_num, "days": days})
+def derive_day_status(day_data: dict[str, Any]) -> str:
+    current = str(day_data.get("status", "not_started"))
+    if current in ("blocked", "skipped"):
+        return current
 
+    task_done, task_total = count_truthy(day_data.get("tasks"))
+    artifact_done, artifact_total = count_truthy(day_data.get("artifacts"))
+    total = task_total + artifact_total
+    done = task_done + artifact_done
+
+    if total and done == total:
+        return "done"
+    if done:
+        return "in_progress"
+    return "not_started"
+
+
+def enrich_day(day: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(day)
+    task_done, task_total = count_truthy(enriched.get("tasks"))
+    artifact_done, artifact_total = count_truthy(enriched.get("artifacts"))
+    enriched["task_done"] = task_done
+    enriched["task_total"] = task_total
+    enriched["artifact_done"] = artifact_done
+    enriched["artifact_total"] = artifact_total
+    enriched["completion_pct"] = pct(task_done + artifact_done, task_total + artifact_total)
+    return enriched
+
+
+def tag_coverage(days: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    coverage = {tag: {"done": 0, "planned": 0} for tag in TAG_ORDER}
+    for day in days:
+        for tag in day.get("jd_tags") or []:
+            if tag not in coverage:
+                coverage[tag] = {"done": 0, "planned": 0}
+            coverage[tag]["planned"] += 1
+            if day.get("status") == "done":
+                coverage[tag]["done"] += 1
+    return coverage
+
+
+def operator_maturity(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for name, info in (data.get("operators") or {}).items():
+        artifacts = info.get("artifacts") or {}
+        done = sum(1 for value in artifacts.values() if truthy(value))
+        total = len(artifacts)
+        result[name] = {
+            "done": done,
+            "total": total,
+            "pct": pct(done, total),
+            "status": info.get("status", "unknown"),
+        }
+    return result
+
+
+def status_counts(days: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {status: 0 for status in STATUS_OPTIONS}
+    for day in days:
+        status = day.get("status", "not_started")
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def summary(days: list[dict[str, Any]]) -> dict[str, Any]:
+    done_days = sum(1 for day in days if day.get("status") == "done")
+    total_tasks = sum(day.get("task_total", 0) for day in days)
+    done_tasks = sum(day.get("task_done", 0) for day in days)
+    total_artifacts = sum(day.get("artifact_total", 0) for day in days)
+    done_artifacts = sum(day.get("artifact_done", 0) for day in days)
+    scored_days = [int(day.get("daily_check", 0)) for day in days if int(day.get("daily_check", 0))]
+    latest_stage = next(
+        (
+            int(day["stage_check_score"])
+            for day in reversed(days)
+            if day.get("stage_check_score")
+        ),
+        None,
+    )
     return {
-        "weeks": weeks,
-        "daily_checks": daily_checks,
-        "weekly_checks": weekly_checks,
-        "stage_checks": stage_checks,
-        "milestones": MILESTONES,
+        "done_days": done_days,
+        "total_days": len(days),
+        "done_tasks": done_tasks,
+        "total_tasks": total_tasks,
+        "done_artifacts": done_artifacts,
+        "total_artifacts": total_artifacts,
+        "average_daily_check": round(sum(scored_days) / len(scored_days), 2) if scored_days else None,
+        "latest_stage_score": latest_stage,
     }
 
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+def current_day(days: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for day in days:
+        if day.get("status") in ("not_started", "in_progress", "blocked"):
+            return day
+    return None
+
+
+def risks(data: dict[str, Any]) -> list[str]:
+    operator_progress = {
+        name: (item["done"], item["total"])
+        for name, item in operator_maturity(data).items()
+    }
+    libraries = {
+        name: info.get("status", "unknown")
+        for name, info in (data.get("gpu_libraries") or {}).items()
+    }
+
+    result: list[str] = []
+    if operator_progress.get("row_softmax", (0, 1))[0] < operator_progress.get("row_softmax", (0, 1))[1]:
+        result.append("row_softmax 还没有闭环；这是 attention/FlashAttention 的前置短板。")
+    if libraries.get("cuda_extension") == "not_started":
+        result.append("CUDA extension 未开始；C++/CUDA 工程证据不足。")
+    if libraries.get("cutlass") == "not_started":
+        result.append("CUTLASS 未开始；GPU 加速库覆盖不足。")
+    if libraries.get("cublas_or_pytorch_gemm") == "not_started":
+        result.append("GEMM/cuBLAS baseline 未开始；无法支撑 GEMM 性能分析叙事。")
+    return result
+
+
+def get_api_data() -> dict[str, Any]:
+    raw = load_progress()
+    days = [enrich_day(day) for day in get_all_days(raw)]
+    weeks = []
+    for week_num in range(1, 9):
+        week_days = [day for day in days if day["week"] == week_num]
+        weeks.append({"num": week_num, "days": week_days})
+
+    return {
+        "meta": raw.get("meta", {}),
+        "weeks": weeks,
+        "operators": raw.get("operators", {}),
+        "gpu_libraries": raw.get("gpu_libraries", {}),
+        "tag_coverage": tag_coverage(days),
+        "operator_maturity": operator_maturity(raw),
+        "status_counts": status_counts(days),
+        "summary": summary(days),
+        "current_day": current_day(days),
+        "risks": risks(raw),
+        "options": {
+            "day_statuses": STATUS_OPTIONS,
+            "operator_statuses": OPERATOR_STATUS_OPTIONS,
+            "library_statuses": LIBRARY_STATUS_OPTIONS,
+            "tags": TAG_ORDER,
+        },
+    }
+
+
+def update_day(day_num: int, updates: dict[str, Any]) -> bool:
+    raw = load_progress()
+    week_key, day_key = get_day_location(day_num)
+    if week_key not in raw or day_key not in raw[week_key]:
+        return False
+
+    day_data = raw[week_key][day_key]
+    for field in TEXT_DAY_FIELDS:
+        if field in updates:
+            day_data[field] = str(updates[field])
+    for field in INT_DAY_FIELDS:
+        if field in updates and updates[field] not in ("", None):
+            day_data[field] = int(updates[field])
+
+    for group_name in ("tasks", "artifacts"):
+        if group_name not in updates:
+            continue
+        group = day_data.get(group_name) or {}
+        for key, value in updates[group_name].items():
+            if key in group:
+                group[key] = bool(value)
+        day_data[group_name] = group
+
+    if updates.get("auto_status", True):
+        day_data["status"] = derive_day_status(day_data)
+
+    save_progress(raw)
+    return True
+
+
+def update_operator(name: str, updates: dict[str, Any]) -> bool:
+    raw = load_progress()
+    operators = raw.get("operators") or {}
+    if name not in operators:
+        return False
+
+    operator = operators[name]
+    if "status" in updates:
+        status = str(updates["status"])
+        if status not in OPERATOR_STATUS_OPTIONS:
+            raise ValueError(f"unknown operator status: {status}")
+        operator["status"] = status
+    if "notes" in updates:
+        operator["notes"] = str(updates["notes"])
+    if "artifacts" in updates:
+        artifacts = operator.get("artifacts") or {}
+        for key, value in updates["artifacts"].items():
+            if key in artifacts:
+                artifacts[key] = bool(value)
+        operator["artifacts"] = artifacts
+
+    save_progress(raw)
+    return True
+
+
+def update_gpu_library(name: str, updates: dict[str, Any]) -> bool:
+    raw = load_progress()
+    libraries = raw.get("gpu_libraries") or {}
+    if name not in libraries:
+        return False
+
+    library = libraries[name]
+    if "status" in updates:
+        status = str(updates["status"])
+        if status not in LIBRARY_STATUS_OPTIONS:
+            raise ValueError(f"unknown library status: {status}")
+        library["status"] = status
+    if "evidence" in updates:
+        evidence = updates["evidence"]
+        if isinstance(evidence, str):
+            library["evidence"] = [line.strip() for line in evidence.splitlines() if line.strip()]
+        elif isinstance(evidence, list):
+            library["evidence"] = [str(item) for item in evidence if str(item).strip()]
+        else:
+            raise ValueError("evidence must be a list or newline-separated string")
+
+    save_progress(raw)
+    return True
+
+
+def cors_origin(origin: str | None) -> str | None:
+    if not origin:
+        return None
+    if origin in SAFE_ORIGINS:
+        return origin
+    if origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:"):
+        return origin
+    return None
+
+
+def json_response(handler: SimpleHTTPRequestHandler, payload: Any, code: int = 200) -> None:
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    handler.send_response(code)
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    origin = cors_origin(handler.headers.get("Origin"))
+    if origin:
+        handler.send_header("Access-Control-Allow-Origin", origin)
+        handler.send_header("Vary", "Origin")
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+class DashboardHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, directory=str(BASE_DIR), **kwargs)
+
+    def log_message(self, format: str, *args: Any) -> None:
+        return
+
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/progress":
+            json_response(self, get_api_data())
+            return
+        if parsed.path in ("/", "/dashboard.html"):
+            body = render_dashboard(embed_data=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            if parsed.path in ("/api/day", "/api/update"):
+                ok = update_day(int(payload["day"]), payload["updates"])
+            elif parsed.path == "/api/operator":
+                ok = update_operator(str(payload["operator"]), payload["updates"])
+            elif parsed.path == "/api/library":
+                ok = update_gpu_library(str(payload["library"]), payload["updates"])
+            else:
+                json_response(self, {"ok": False, "error": "not found"}, code=404)
+                return
+            json_response(self, {"ok": ok})
+        except Exception as exc:
+            json_response(self, {"ok": False, "error": str(exc)}, code=400)
+
+    def do_OPTIONS(self) -> None:
+        origin = cors_origin(self.headers.get("Origin"))
+        self.send_response(200)
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+
+def render_dashboard(embed_data: bool = True) -> str:
+    data = get_api_data()
+    title = html.escape(data.get("meta", {}).get("title", "Study Plan"))
+    initial_data = ""
+    if embed_data:
+        payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+        initial_data = f'<script type="application/json" id="initial-data">{payload}</script>'
+
+    return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Infra 学习进度</title>
-<style>
-:root {
-  --bg: #1a1b26;
-  --surface: #24283b;
-  --surface2: #2f3549;
-  --text: #c0caf5;
-  --text-dim: #565f89;
-  --accent: #7aa2f7;
-  --green: #9ece6a;
-  --yellow: #e0af68;
-  --red: #f7768e;
-  --purple: #bb9af7;
-  --cyan: #7dcfff;
-  --orange: #ff9e64;
-  --radius: 8px;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
-  background: var(--bg);
-  color: var(--text);
-  padding: 24px;
-  min-height: 100vh;
-}
-
-.container { max-width: 1200px; margin: 0 auto; }
-
-h1 {
-  font-size: 1.5rem;
-  margin-bottom: 8px;
-  color: var(--accent);
-}
-
-.subtitle {
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  margin-bottom: 32px;
-}
-
-/* ─── 总览卡片 ─── */
-.overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 20px;
-  text-align: center;
-}
-
-.stat-card .value {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.stat-card .label {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* ─── 进度条 ─── */
-.progress-section { margin-bottom: 32px; }
-
-.progress-section h2 {
-  font-size: 1rem;
-  margin-bottom: 16px;
-  color: var(--text);
-}
-
-.progress-bar-container {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  margin-bottom: 12px;
-}
-
-.progress-bar-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 0.8rem;
-}
-
-.progress-bar-track {
-  height: 8px;
-  background: var(--surface2);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s ease;
-}
-
-/* ─── 周网格 ─── */
-.weeks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.week-card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-
-.week-card h3 {
-  font-size: 0.9rem;
-  margin-bottom: 12px;
-  color: var(--accent);
-}
-
-.day-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--surface2);
-  font-size: 0.75rem;
-}
-
-.day-row:last-child { border-bottom: none; }
-
-.day-status {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.day-status.done { background: var(--green); }
-.day-status.in_progress { background: var(--yellow); }
-.day-status.skipped { background: var(--red); }
-.day-status.not_started { background: var(--surface2); border: 1px solid var(--text-dim); }
-
-.day-title { flex: 1; color: var(--text); }
-.day-title.dim { color: var(--text-dim); }
-
-.day-tasks {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-}
-
-.day-check {
-  display: flex;
-  gap: 2px;
-}
-
-.check-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--surface2);
-}
-
-.check-dot.filled-3 { background: var(--green); }
-.check-dot.filled-2 { background: var(--yellow); }
-.check-dot.filled-1 { background: var(--red); }
-
-/* ─── 日检趋势图 ─── */
-.chart-section {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 32px;
-}
-
-.chart-section h2 {
-  font-size: 1rem;
-  margin-bottom: 16px;
-}
-
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 80px;
-  padding-top: 8px;
-}
-
-.chart-bar {
-  flex: 1;
-  min-width: 12px;
-  max-width: 24px;
-  border-radius: 3px 3px 0 0;
-  position: relative;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.chart-bar:hover { opacity: 0.8; }
-
-.chart-bar .tooltip {
-  display: none;
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface2);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  white-space: nowrap;
-  margin-bottom: 4px;
-}
-
-.chart-bar:hover .tooltip { display: block; }
-
-.chart-labels {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.chart-labels span {
-  flex: 1;
-  min-width: 12px;
-  max-width: 24px;
-  text-align: center;
-  font-size: 0.6rem;
-  color: var(--text-dim);
-}
-
-/* ─── 里程碑 ─── */
-.milestones {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 32px;
-}
-
-.milestones h2 {
-  font-size: 1rem;
-  margin-bottom: 16px;
-}
-
-.milestone-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--surface2);
-  font-size: 0.8rem;
-}
-
-.milestone-item:last-child { border-bottom: none; }
-
-.milestone-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  flex-shrink: 0;
-}
-
-.milestone-icon.done { background: var(--green); color: var(--bg); }
-.milestone-icon.pending { background: var(--surface2); color: var(--text-dim); }
-
-.milestone-week {
-  color: var(--text-dim);
-  font-size: 0.7rem;
-  min-width: 40px;
-}
-
-/* ─── 热力图 ─── */
-.heatmap {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 32px;
-}
-
-.heatmap h2 {
-  font-size: 1rem;
-  margin-bottom: 16px;
-}
-
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  max-width: 400px;
-}
-
-.heatmap-cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
-  position: relative;
-  cursor: pointer;
-  min-height: 20px;
-}
-
-.heatmap-cell .tooltip {
-  display: none;
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface2);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.65rem;
-  white-space: nowrap;
-  margin-bottom: 4px;
-  z-index: 10;
-}
-
-.heatmap-cell:hover .tooltip { display: block; }
-
-.heat-0 { background: var(--surface2); }
-.heat-1 { background: #2d4a3e; }
-.heat-2 { background: #3d6b4f; }
-.heat-3 { background: var(--green); }
-
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-}
-
-.heatmap-legend .cell {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-}
-
-/* ─── 响应式 ─── */
-@media (max-width: 768px) {
-  body { padding: 12px; }
-  .overview { grid-template-columns: repeat(2, 1fr); }
-  .weeks-grid { grid-template-columns: 1fr; }
-}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f8fb">
+<title>{title}</title>
+<link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-<div class="container">
-  <h1>🚀 AI Infra 8 周学习计划</h1>
-  <p class="subtitle">目标：2 个月内拿到大模型推理优化岗位 offer</p>
-
-  <!-- 总览 -->
-  <div class="overview" id="overview"></div>
-
-  <!-- 总进度条 -->
-  <div class="progress-section" id="progress-bars"></div>
-
-  <!-- 热力图 -->
-  <div class="heatmap" id="heatmap-section"></div>
-
-  <!-- 日检趋势 -->
-  <div class="chart-section" id="daily-chart"></div>
-
-  <!-- 里程碑 -->
-  <div class="milestones" id="milestones"></div>
-
-  <!-- 每周详情 -->
-  <div class="weeks-grid" id="weeks-grid"></div>
+<a class="skip-link" href="#app">Skip To Dashboard</a>
+<main>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">LLM Kernel Lab</p>
+      <h1>{title}</h1>
+      <p class="subtitle">本地可编辑进度面板。启动 <code>python study-plan/dashboard.py --serve</code> 后可保存到 <code>progress.yaml</code>。</p>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="ghost" id="refresh-button">Refresh Data</button>
+    </div>
+  </header>
+  <div id="app" tabindex="-1">
+    <section class="empty-state" aria-live="polite">
+      <h2>Loading Dashboard…</h2>
+      <p>Reading progress data from the local workspace.</p>
+    </section>
+  </div>
+</main>
+<div
+  class="drawer"
+  id="drawer"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="editor-title"
+  aria-describedby="editor-help"
+  hidden
+>
+  <form class="editor" id="editor" novalidate></form>
 </div>
-
-<script>
-const DATA = __DATA_PLACEHOLDER__;
-
-function render() {
-  renderOverview();
-  renderProgressBars();
-  renderHeatmap();
-  renderDailyChart();
-  renderMilestones();
-  renderWeeks();
-}
-
-function renderOverview() {
-  const el = document.getElementById('overview');
-  const allDays = DATA.weeks.flatMap(w => w.days);
-  const done = allDays.filter(d => d.status === 'done').length;
-  const total = allDays.length;
-  const tasksD = allDays.reduce((s, d) => s + d.tasks_done, 0);
-  const tasksT = allDays.reduce((s, d) => s + d.tasks_total, 0);
-  const avgCheck = DATA.daily_checks.length > 0
-    ? (DATA.daily_checks.reduce((s, d) => s + d.score, 0) / DATA.daily_checks.length).toFixed(1)
-    : '—';
-  const lastStage = DATA.stage_checks.length > 0
-    ? DATA.stage_checks[DATA.stage_checks.length - 1].score
-    : '—';
-
-  el.innerHTML = `
-    <div class="stat-card">
-      <div class="value" style="color:var(--green)">${done}/${total}</div>
-      <div class="label">天数完成</div>
-    </div>
-    <div class="stat-card">
-      <div class="value" style="color:var(--accent)">${tasksD}/${tasksT}</div>
-      <div class="label">子任务完成</div>
-    </div>
-    <div class="stat-card">
-      <div class="value" style="color:var(--yellow)">${avgCheck}</div>
-      <div class="label">日检平均分 /3</div>
-    </div>
-    <div class="stat-card">
-      <div class="value" style="color:var(--purple)">${lastStage}</div>
-      <div class="label">最近阶段检 /100</div>
-    </div>
-  `;
-}
-
-function renderProgressBars() {
-  const el = document.getElementById('progress-bars');
-  const allDays = DATA.weeks.flatMap(w => w.days);
-  const done = allDays.filter(d => d.status === 'done').length;
-  const total = allDays.length;
-  const pct = total > 0 ? (done / total * 100) : 0;
-
-  let weekBars = '';
-  DATA.weeks.forEach(w => {
-    const wd = w.days.filter(d => d.status === 'done').length;
-    const wt = w.days.length;
-    const wp = wt > 0 ? (wd / wt * 100) : 0;
-    const color = wp >= 100 ? 'var(--green)' : wp > 0 ? 'var(--accent)' : 'var(--surface2)';
-    weekBars += `
-      <div class="progress-bar-container">
-        <div class="progress-bar-label">
-          <span>Week ${w.num}</span>
-          <span>${wd}/${wt}</span>
-        </div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" style="width:${wp}%;background:${color}"></div>
-        </div>
-      </div>
-    `;
-  });
-
-  el.innerHTML = `
-    <h2>📊 进度</h2>
-    <div class="progress-bar-container">
-      <div class="progress-bar-label">
-        <span>总体进度</span>
-        <span>${pct.toFixed(1)}%</span>
-      </div>
-      <div class="progress-bar-track">
-        <div class="progress-bar-fill" style="width:${pct}%;background:var(--green)"></div>
-      </div>
-    </div>
-    ${weekBars}
-  `;
-}
-
-function renderHeatmap() {
-  const el = document.getElementById('heatmap-section');
-  const allDays = DATA.weeks.flatMap(w => w.days);
-
-  let cells = '';
-  allDays.forEach(d => {
-    let heat = 0;
-    if (d.status === 'done') heat = d.daily_check || 1;
-    else if (d.status === 'in_progress') heat = 1;
-    const title = `Day ${d.num}: ${d.title}`;
-    cells += `<div class="heatmap-cell heat-${Math.min(heat, 3)}"><span class="tooltip">${title} (${d.status})</span></div>`;
-  });
-
-  el.innerHTML = `
-    <h2>🗓️ 完成热力图</h2>
-    <div class="heatmap-grid">${cells}</div>
-    <div class="heatmap-legend">
-      <span>少</span>
-      <div class="cell heat-0"></div>
-      <div class="cell heat-1"></div>
-      <div class="cell heat-2"></div>
-      <div class="cell heat-3"></div>
-      <span>多</span>
-    </div>
-  `;
-}
-
-function renderDailyChart() {
-  const el = document.getElementById('daily-chart');
-  if (DATA.daily_checks.length === 0) {
-    el.innerHTML = '<h2>📈 日检分数趋势</h2><p style="color:var(--text-dim);font-size:0.8rem;">还没有日检数据</p>';
-    return;
-  }
-
-  const maxScore = 3;
-  let bars = '';
-  let labels = '';
-  DATA.daily_checks.forEach(d => {
-    const h = (d.score / maxScore) * 100;
-    const color = d.score >= 3 ? 'var(--green)' : d.score >= 2 ? 'var(--yellow)' : 'var(--red)';
-    bars += `<div class="chart-bar" style="height:${h}%;background:${color}"><span class="tooltip">Day ${d.day}: ${d.score}/3</span></div>`;
-    labels += `<span>${d.day}</span>`;
-  });
-
-  el.innerHTML = `
-    <h2>📈 日检分数趋势</h2>
-    <div class="chart-bars">${bars}</div>
-    <div class="chart-labels">${labels}</div>
-  `;
-}
-
-function renderMilestones() {
-  const el = document.getElementById('milestones');
-  const allDays = DATA.weeks.flatMap(w => w.days);
-
-  let items = '';
-  DATA.milestones.forEach((m, i) => {
-    const day = allDays.find(d => d.num === m.day);
-    const done = day && day.status === 'done';
-    const icon = done ? '✓' : (i + 1);
-    const cls = done ? 'done' : 'pending';
-    const week = Math.ceil(m.day / 7);
-    items += `
-      <div class="milestone-item">
-        <div class="milestone-icon ${cls}">${icon}</div>
-        <span class="milestone-week">W${week}</span>
-        <span>${m.text}</span>
-      </div>
-    `;
-  });
-
-  el.innerHTML = `<h2>🏁 里程碑</h2>${items}`;
-}
-
-function renderWeeks() {
-  const el = document.getElementById('weeks-grid');
-  let html = '';
-
-  DATA.weeks.forEach(w => {
-    let rows = '';
-    w.days.forEach(d => {
-      const titleCls = d.status === 'not_started' ? 'dim' : '';
-      let checks = '';
-      for (let i = 0; i < 3; i++) {
-        const cls = i < d.daily_check ? `filled-${d.daily_check}` : '';
-        checks += `<div class="check-dot ${cls}"></div>`;
-      }
-      const tasks = d.tasks_total > 0 ? `${d.tasks_done}/${d.tasks_total}` : '';
-      rows += `
-        <div class="day-row">
-          <div class="day-status ${d.status}"></div>
-          <span class="day-title ${titleCls}">${d.num}. ${d.title}</span>
-          <span class="day-tasks">${tasks}</span>
-          <div class="day-check">${checks}</div>
-        </div>
-      `;
-    });
-
-    html += `
-      <div class="week-card">
-        <h3>Week ${w.num}</h3>
-        ${rows}
-      </div>
-    `;
-  });
-
-  el.innerHTML = html;
-}
-
-render();
-</script>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+{initial_data}
+<script src="dashboard.js"></script>
 </body>
-</html>"""
+</html>
+"""
 
 
-def build_html():
-    data = load_progress()
-    transformed = transform_data(data)
-    json_data = json.dumps(transformed, ensure_ascii=False, indent=None)
-    html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json_data)
-    OUTPUT_HTML.write_text(html, encoding="utf-8")
-    print(f"✓ 已生成 {OUTPUT_HTML}")
-    return OUTPUT_HTML
+def build() -> None:
+    html_text = render_dashboard(embed_data=True)
+    OUTPUT_HTML.write_text(html_text, encoding="utf-8")
+    print(f"Generated {OUTPUT_HTML}")
 
 
-def serve(port=8765):
-    build_html()
-    os.chdir(OUTPUT_HTML.parent)
-
-    class Handler(SimpleHTTPRequestHandler):
-        def log_message(self, format, *args):
-            pass  # 静默
-
-    server = HTTPServer(("127.0.0.1", port), Handler)
+def serve(port: int = 8765) -> None:
+    build()
+    server = HTTPServer(("127.0.0.1", port), DashboardHandler)
     url = f"http://127.0.0.1:{port}/dashboard.html"
-    print(f"🌐 服务器运行在 {url}")
-    print(f"   按 Ctrl+C 停止")
-
+    print(f"Serving {url}")
     threading.Timer(0.5, lambda: webbrowser.open(url)).start()
-
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n已停止")
-        server.shutdown()
+        print("\nStopped")
+        server.server_close()
 
 
-def main():
-    args = sys.argv[1:]
-
-    if "--serve" in args:
-        serve()
-    elif "--build" in args:
-        build_html()
+def main() -> None:
+    if "--serve" in sys.argv:
+        port = 8765
+        for arg in sys.argv[1:]:
+            if arg.isdigit():
+                port = int(arg)
+        serve(port)
     else:
-        path = build_html()
-        # 尝试打开浏览器
-        url = f"file://{path.resolve()}"
-        print(f"🌐 打开 {url}")
-        webbrowser.open(url)
+        build()
+        if "--build" not in sys.argv:
+            webbrowser.open(OUTPUT_HTML.as_uri())
 
 
 if __name__ == "__main__":

@@ -1,174 +1,99 @@
-# llm-kernel-lab
+# 8 周 AI Infra 求职学习计划
 
-Learning repo for LLM inference framework internals and GPU kernel development on WSL2 Ubuntu.
+目标：2 个月内具备字节/腾讯/小红书/美团等公司 AI Infra 岗位的面试能力。
 
-The target machine is an RTX 4060 Laptop GPU with about 8 GB VRAM and 16 GB system memory. The goal is not to run large models. The goal is to build a small, repeatable lab for learning:
+## 目标岗位方向
 
-1. Triton kernels
-2. PyTorch C++/CUDA extensions
-3. vLLM runtime concepts
-4. llama.cpp / ggml internals
+- 大模型推理优化工程师
+- AI 异构计算优化
+- 大模型推理框架研发
+- 大模型压缩算法
 
-This stage does not install vLLM, does not clone llama.cpp, and does not download any model weights.
+## 时间分配
 
-## Repository Layout
+| 维度 | 占比 | 目标 |
+|------|------|------|
+| Kernel 开发 | 25% | 闭卷手写 reduction/softmax/GEMM/FlashAttention |
+| 推理系统 | 25% | vLLM/SGLang 源码级理解，能讲清调度/KV Cache/batching |
+| 分布式训练/推理 | 15% | TP/PP/DP/EP 通信分析，能画图算量 |
+| 模型压缩 | 10% | INT4/FP8 量化原理和 kernel 实现 |
+| 面试准备 | 25% | 系统设计、论文串讲、项目包装、LeetCode |
 
-```text
-.
-├── AGENTS.md
-├── README.md
-├── docs/
-│   ├── cuda_extension.md
-│   ├── llama_cpp_ggml.md
-│   └── vllm_runtime.md
-├── kernels/
-│   ├── cuda_extension/
-│   │   └── README.md
-│   └── triton/
-│       └── vector_add/
-│           └── vector_add.py
-├── scripts/
-│   ├── 00_check_system.sh
-│   ├── 01_setup_conda_env.sh
-│   ├── 02_install_pytorch_triton.sh
-│   └── 04_verify_all.sh
-└── tests/
-    └── test_vector_add.py
+## 评估体系
+
+### 三层检验
+
+| 层级 | 频率 | 方式 | 通过标准 |
+|------|------|------|----------|
+| 日检 | 每天结束 | 闭卷手写 + 口述录音 | 15 分钟内不看资料写出/讲出当天核心内容 |
+| 周检 | 每周日 | 模拟面试 45 分钟 | 7 题随机抽取，总分 ≥ 15/21 |
+| 阶段检 | 第 2/4/6/8 周末 | 完整 mock interview 2 小时 | 评分 ≥ 70/100 |
+
+### 日检操作
+
+每天学完后关掉所有资料，打开空文件限时完成：
+- Kernel 类：15 分钟写出完整可运行代码
+- 概念类：5 分钟口述录音，能回答一个"为什么"追问
+- 系统设计类：10 分钟画出架构图 + 标注数据流
+
+不通过处理：第二天上午补课，不往下推进。连续 2 天不通过则当周计划后移 1 天。
+
+### 周检评分
+
+每题 0-3 分：
+- 0：完全不会或严重错误
+- 1：知道方向但细节模糊
+- 2：核心讲清楚，1-2 个细节不确定
+- 3：清晰准确，能主动延伸 tradeoff
+
+### 阶段检评分表
+
+| 环节 | 时长 | 满分 |
+|------|------|------|
+| 项目深挖（STAR） | 20min | 20 |
+| 系统设计 | 25min | 20 |
+| 八股/原理（5题） | 15min | 20 |
+| 手撕 kernel | 20min | 20 |
+| 算法题 | 20min | 20 |
+| **总计** | **100min** | **100** |
+
+及格线：70 分。
+
+### 硬性里程碑
+
+| 周 | 必须达成 |
+|----|----------|
+| W1 | 5 个 kernel 有 benchmark；闭卷写 reduction + softmax |
+| W2 | FlashAttention 通过正确性测试；vLLM 流程图完成 |
+| W3 | INT4 dequant kernel 有 benchmark；SGLang 对比文档 |
+| W4 | Mini inference engine 可运行 或 PR 已提交 |
+| W5 | GitHub repo README 有完整 benchmark 图表 |
+| W6 | Mock interview ≥ 60 分 |
+| W7 | Mock interview ≥ 70 分；论文 5 分钟串讲 |
+| W8 | Mock interview ≥ 75 分；简历定稿；开始投递 |
+
+## 每日进度记录模板
+
+```markdown
+## Day X - [日期]
+- [ ] 上午任务完成
+- [ ] 下午任务完成
+- [ ] 晚上任务完成
+- [ ] 日检通过
+- 日检得分: __/3
+- 卡点记录:
+- 明日补课项:
 ```
 
-## Step-by-Step Setup
+## 目录结构
 
-Run each step separately. Do not skip verification between steps.
-
-### 0. Check the WSL2 system
-
-```bash
-bash scripts/00_check_system.sh
 ```
-
-What it modifies: nothing. This is a read-only check.
-
-It prints Linux, Ubuntu, compiler, build tool, conda, Python, and `nvidia-smi` information. It does not install drivers or system packages.
-
-### 1. Create the conda environment
-
-```bash
-bash scripts/01_setup_conda_env.sh
+week1/  - CUDA Kernel 基础 + Roofline + 分布式概念
+week2/  - FlashAttention + 推理系统入门 + 量化基础
+week3/  - 推理系统深入 + 项目启动
+week4/  - 项目产出 + 开源贡献
+week5/  - 分布式深入 + 项目完善
+week6/  - 面试冲刺（系统设计 + 论文）
+week7/  - Mock Interview + 项目包装
+week8/  - 投递 + 查漏补缺
 ```
-
-What it modifies: your conda installation by creating an environment named `llm-kernel-lab`.
-
-It does not use `sudo`, does not modify system Python, and does not install PyTorch.
-
-Activate the environment:
-
-```bash
-conda activate llm-kernel-lab
-```
-
-### 2. Install Python dependencies
-
-```bash
-bash scripts/02_install_pytorch_triton.sh
-```
-
-What it modifies: only the active `llm-kernel-lab` conda environment.
-
-It installs:
-
-- PyTorch CUDA wheel
-- Triton
-- pytest
-- numpy
-
-It does not install a Windows NVIDIA driver, does not install system CUDA toolkit, and does not download models.
-
-By default the script uses the PyTorch CUDA 12.1 wheel index:
-
-```text
-https://download.pytorch.org/whl/cu121
-```
-
-You can override it when needed:
-
-```bash
-PYTORCH_CUDA_INDEX_URL=https://download.pytorch.org/whl/cu124 bash scripts/02_install_pytorch_triton.sh
-```
-
-### 3. Verify everything
-
-```bash
-bash scripts/04_verify_all.sh
-```
-
-What it modifies: nothing important in the repository. It may create normal Python cache files.
-
-It verifies:
-
-- The active conda environment is `llm-kernel-lab`
-- PyTorch imports successfully
-- `torch.cuda.is_available()` is true
-- The GPU name can be printed
-- Triton imports successfully
-- The minimal Triton vector add kernel runs
-- `pytest tests/` passes
-
-## Learning Route
-
-### 1. Triton kernel
-
-Start with `kernels/triton/vector_add/vector_add.py`. Learn how a simple elementwise kernel maps program IDs to blocks, applies masks, and launches from Python.
-
-Next exercises:
-
-- Add vector multiply
-- Add scalar scale-and-add
-- Benchmark against PyTorch
-- Implement row-wise reductions
-
-The next learning slice is `axpy` (`z = alpha * x + y`), which keeps the same block/mask structure but adds a scalar parameter.
-
-### 2. CUDA extension
-
-Use `kernels/cuda_extension/` for PyTorch C++/CUDA extension experiments.
-
-Recommended sequence:
-
-- Write a CPU-only C++ extension first
-- Add a minimal CUDA kernel
-- Use `torch.utils.cpp_extension`
-- Compare extension output against PyTorch reference ops
-
-### 3. vLLM runtime
-
-Use `docs/vllm_runtime.md` for notes before installing vLLM.
-
-Focus areas:
-
-- KV cache layout
-- PagedAttention
-- scheduler behavior
-- batching and continuous batching
-- how custom kernels fit into runtime design
-
-Do not install vLLM until the PyTorch/Triton baseline is verified.
-
-### 4. llama.cpp / ggml
-
-Use `docs/llama_cpp_ggml.md` for source-reading notes.
-
-For this stage, do not clone llama.cpp. Later, read it separately with attention to:
-
-- tensor representation
-- quantization formats
-- ggml graph execution
-- CPU/GPU backend boundaries
-
-## Constraints
-
-- Do not run `sudo apt install` from repo scripts.
-- Do not use `curl | sh` or similar pipe-to-shell installers.
-- Do not install Windows NVIDIA drivers from WSL.
-- Do not download model weights.
-- Do not install 7B/8B model assets or model-specific dependencies.
-- Keep each setup step independently runnable and independently verifiable.

@@ -1,253 +1,174 @@
 # 第 3-8 周概要计划
 
-前两周的详细日计划已经写好。第 3-8 周的详细日计划将在第 2 周结束后根据实际进度和阶段检暴露的薄弱点调整。以下是每周的方向和关键任务。
+本文件与 [inference-acceleration-plan.md](./inference-acceleration-plan.md) 对齐。第 1-2 周补 `row_softmax`、RMSNorm 和 CUDA extension；第 3 周开始进入 GEMM/CUTLASS，并逐步过渡到 attention、KV cache 和推理框架。
 
----
-
-## 第 3 周：推理系统深入 + 项目启动
+## 第 3 周：GEMM / cuBLAS / CUTLASS
 
 ### 主题
-- SGLang 源码（RadixAttention / prefix caching）
-- PD 分离（Prefill-Decode Disaggregation）
-- Attention 变体（GQA, MQA, MLA）
-- 启动主项目（Mini Inference Engine 或 开源 PR）
+
+- PyTorch/cuBLAS GEMM benchmark
+- GEMM shape sweep 和 TFLOPS 计算
+- CUTLASS profiler 或受限环境说明
+- roofline 和 epilogue/fusion 概念
 
 ### 每日安排
 
 | Day | 上午（3h） | 下午（2h） | 晚上（1.5h） |
 |-----|-----------|-----------|-------------|
-| 15 | SGLang RadixAttention 源码 | 写 prefix caching 对比文档 | LeetCode (Trie 变体) |
-| 16 | PD 分离原理 + DistServe 论文 | KV Cache 压缩 (FP8 KV) | 4D Parallelism 组合策略 |
-| 17 | GQA/MQA 实现 + 为什么省内存 | MLA (Multi-head Latent Attention) | LeetCode (编辑距离) |
-| 18 | 项目选型：Mini Engine vs PR | 搭建项目骨架 | 分布式推理：TP inference |
-| 19 | 项目开发：continuous batching scheduler | 项目开发：KV cache manager | Nsight profiling 实操 |
-| 20 | 项目开发：model loading + forward | 项目开发：sampling + streaming | LeetCode |
-| 21 | 周复习 + 周检 | 项目 demo 验证 | 下周规划 |
+| 15 | GEMM benchmark harness | PyTorch/cuBLAS baseline | 记录 shape/dtype |
+| 16 | GEMM shape sweep | TFLOPS 表 | 解释小/大 shape 差异 |
+| 17 | CUTLASS profiler 入门 | profiler run 或受限说明 | CUTLASS 概念笔记 |
+| 18 | arithmetic intensity | roofline 表 | bottleneck 判断 |
+| 19 | epilogue/fusion 概念 | bias/activation/fusion note | 面试问答整理 |
+| 20 | GEMM tradeoff 复盘 | cuBLAS/CUTLASS/Triton 对比 | 闭卷口述 |
+| 21 | 周复习 + 周检 | GEMM/CUTLASS/Nsight mock | 下周计划 |
 
 ### 关键交付物
-- `docs/prefix-caching-comparison.md`（vLLM vs SGLang）
-- `docs/pd-disaggregation.md`
-- 项目骨架代码可运行
 
-### 周检题库方向
-- RadixAttention vs hash-based prefix caching
-- PD 分离的 tradeoff
-- GQA 为什么能减少 KV cache 大小
-- MLA 的核心 idea
-- 4D parallelism 怎么组合
+- GEMM benchmark 表
+- CUTLASS profiler 笔记或受限说明
+- roofline 表
 
----
-
-## 第 4 周：项目产出 + 开源贡献
+## 第 4 周：Attention Kernel
 
 ### 主题
-- 完成主项目的核心功能
-- 尝试给 vLLM/SGLang 提 PR
-- 量化实操（用 AutoGPTQ/LLM-Compressor 量化模型）
-- 分布式推理实操
+
+- PyTorch SDPA reference
+- online softmax
+- FlashAttention forward toy
+- prefill vs decode attention
 
 ### 每日安排
 
 | Day | 上午（3h） | 下午（2h） | 晚上（1.5h） |
 |-----|-----------|-----------|-------------|
-| 22 | 项目：实现 paged attention | 项目：benchmark 脚本 | 量化实操：AWQ 量化 1.5B 模型 |
-| 23 | 项目：实现 continuous batching | 项目：对比 vLLM 性能 | 量化实操：对比精度和速度 |
-| 24 | 开源 PR：找 good-first-issue | 开源 PR：理解代码 + 写方案 | LeetCode |
-| 25 | 开源 PR：实现 + 测试 | 开源 PR：提交 | 分布式：TP 推理实验 |
-| 26 | 项目完善：error handling | 项目完善：metrics/monitoring | LeetCode |
-| 27 | 项目 README + benchmark 图表 | 项目 demo 录屏 | 论文阅读：DistServe |
-| 28 | 周复习 + 周检 + 阶段检 #2 | 阶段检 #2 | 下周规划 |
+| 22 | Attention 数学 | SDPA reference | shape set |
+| 23 | online softmax 推导 | 数值稳定证明 | 闭卷推导 |
+| 24 | FlashAttention skeleton | block tiling | address mapping |
+| 25 | correctness tests | aligned/non-aligned shapes | tolerance note |
+| 26 | benchmark | SDPA 对比 | 慢在哪里 |
+| 27 | decode attention | prefill vs decode | decode bottleneck note |
+| 28 | 周复习 + 阶段检 | attention kernel mock | 下周计划 |
 
 ### 关键交付物
-- 可运行的 mini inference engine（或已提交的 PR）
-- 量化实验报告（AWQ vs 原始模型的 perplexity + throughput）
-- 项目 README 有 benchmark 数据
 
-### 阶段检 #2 目标
-- 得分 ≥ 65（比 #1 提升 5+）
-- 项目深挖环节能讲清楚自己的实现
+- FlashAttention forward toy 或 decode attention toy
+- SDPA 对比 benchmark
+- attention bottleneck note
 
----
-
-## 第 5 周：项目完善 + 技术输出
+## 第 5 周：KV Cache / PagedAttention / Scheduler Toy / 排障
 
 ### 主题
-- 项目 benchmark 完善（多维度对比）
-- 写 2-3 篇技术博客
-- Nsight Compute profiling 深入
-- 开始系统设计练习
+
+- contiguous KV cache
+- paged KV block table
+- PagedAttention 数据流
+- continuous batching 和 chunked prefill
+- TTFT/TPOT/ITL/P99/KV usage/prefix hit 排障指标
+- Speculative Decoding 和 N-gram cache
 
 ### 每日安排
 
 | Day | 上午（3h） | 下午（2h） | 晚上（1.5h） |
 |-----|-----------|-----------|-------------|
-| 29 | 项目 benchmark：不同 seq_len/batch | 生成 benchmark 图表 | 博客 1：FlashAttention 原理 |
-| 30 | Nsight Compute 深入分析 | 写 roofline 分析报告 | 博客 1 完成 |
-| 31 | 项目优化：找到瓶颈并改进 | 更新 benchmark | 博客 2：vLLM 调度原理 |
-| 32 | 系统设计练习 #1 | 系统设计练习 #2 | 博客 2 完成 |
-| 33 | 系统设计练习 #3 | GitHub repo 整理 | LeetCode |
-| 34 | 博客 3：量化技术对比 | 博客 3 完成 | 论文串讲练习 |
-| 35 | 周复习 + 周检 | 检查所有交付物 | 下周规划 |
+| 29 | KV cache layout | contiguous KV toy | memory footprint |
+| 30 | block table | logical-to-physical mapping | page size tradeoff |
+| 31 | PagedAttention 数据流 | access diagram | cache miss/fragmentation |
+| 32 | continuous batching toy | prefill/decode queue | scheduling policy |
+| 33 | chunked prefill + KV 压缩 | workload simulation | 排障 playbook |
+| 34 | speculative decoding | draft-verify toy | N-gram cache |
+| 35 | 周复习 + 周检 | KV/scheduler/spec decode mock | producer-consumer drill |
 
 ### 关键交付物
-- GitHub repo 有完整 README + benchmark 图表 + roofline 分析
-- 2-3 篇技术博客（知乎/掘金）
-- 3 个系统设计练习的完整文档
 
-### 系统设计练习题
-1. 设计支持 1000 QPS 的 LLM serving（考虑 batching、KV cache、负载均衡）
-2. 8xA100 部署 70B 模型方案（TP vs PP vs TP+PP）
-3. 设计多模型推理平台（路由、资源隔离、弹性扩缩）
+- paged KV cache toy
+- continuous batching toy scheduler
+- latency/throughput workload model 和排障 playbook
+- speculative decoding + N-gram cache note
 
----
-
-## 第 6 周：面试冲刺 - 系统设计 + 论文
+## 第 6 周：vLLM / SGLang / TensorRT-LLM
 
 ### 主题
-- 系统设计专项训练
-- 论文 5 分钟串讲练习
-- 八股题系统复习
-- 第一次完整 mock interview
+
+- vLLM engine/scheduler/block manager
+- SGLang RadixAttention/prefix caching、Mooncake/external KVCache、RBG、KV Router
+- TensorRT-LLM inflight batching、paged KV、plugin/kernel 思路
+- 美团 LongCat 相关：MoE routing、TopK fusion、N-gram cache、AllReduce/RMSNorm fusion
+- TP/PP/PD/EPD 分离和 dynamic PD
 
 ### 每日安排
 
 | Day | 上午（3h） | 下午（2h） | 晚上（1.5h） |
 |-----|-----------|-----------|-------------|
-| 36 | 系统设计：LLM serving 全链路 | 论文串讲：FlashAttention 1&2 | 八股复习：CUDA 基础 |
-| 37 | 系统设计：分布式训练集群 | 论文串讲：PagedAttention | 八股复习：分布式 |
-| 38 | 系统设计：模型压缩部署 | 论文串讲：Speculative Decoding | 八股复习：量化 |
-| 39 | Mock interview #1（找朋友或 AI） | 复盘 + 补课 | LeetCode |
-| 40 | 论文串讲：Orca + DistServe | 论文串讲：DeepSeek-V3 | 八股复习：推理系统 |
-| 41 | Mock interview #2 | 复盘 + 补课 | 项目故事 STAR 练习 |
-| 42 | 周复习 + 周检 + 阶段检 #3 | 阶段检 #3 | 下周规划 |
+| 36 | vLLM architecture | engine/scheduler 图 | 5 分钟串讲 |
+| 37 | vLLM scheduler | scheduling decision flow | preemption |
+| 38 | vLLM KV/block manager | block lifecycle | PagedAttention 复盘 |
+| 39 | SGLang architecture | SGLang vs vLLM | framework 对比表 |
+| 40 | RadixAttention | Mooncake/RBG/external KV | 小红书平台题 |
+| 41 | TensorRT-LLM | LongCat MoE/fusion/N-gram | 美团平台题 |
+| 42 | TP/PP/PD/EPD | KV Router/dynamic PD | 分布式架构图 |
+| 43 | 周复习 + 阶段检 | 推理框架 mock | Mooncake/RBG/LongCat drill |
 
-### 必读论文清单（能 5 分钟讲清楚）
-1. FlashAttention 1 & 2
-2. PagedAttention (vLLM)
-3. Speculative Decoding (Leviathan et al.)
-4. GPTQ / AWQ / SmoothQuant
-5. Orca (Continuous Batching)
-6. DistServe (PD 分离)
-7. Megatron-LM (3D Parallelism)
-8. DeepSeek-V3 (MoE + FP8)
+### 关键交付物
 
-### 八股题清单
-```
-CUDA:
-- 线程层次 grid/block/warp/thread
-- Shared memory bank conflict
-- Warp divergence
-- Memory coalescing
-- Occupancy 和性能关系
-- Tensor Core 使用条件
-- CUDA stream 和 event
+- vLLM scheduler/KV block manager 图
+- SGLang + Mooncake/RBG/external KV 对比文档
+- TensorRT-LLM + LongCat MoE/fusion/N-gram 对比表
+- TP/PP/PD/EPD + KV routing 架构图
 
-推理系统:
-- KV Cache 管理
-- Continuous batching
-- Chunked prefill
-- Prefix caching
-- Speculative decoding
-- FlashAttention/FlashDecoding
-
-分布式:
-- TP/PP/DP/EP/CP
-- Ring AllReduce
-- NCCL
-- ZeRO-1/2/3/FSDP
-- 1F1B pipeline
-
-量化:
-- GPTQ vs AWQ
-- FP8 E4M3 vs E5M2
-- Per-tensor vs per-channel vs per-group
-- Weight-only vs weight+activation
-```
-
-### 阶段检 #3 目标：≥ 70
-
----
-
-## 第 7 周：Mock Interview 密集 + 项目包装
+## 第 7 周：量化推理加速
 
 ### 主题
-- 每天 1 次 mock interview
-- 项目包装（README、demo、数据）
-- 简历撰写
-- 薄弱点补课
+
+- INT4 weight-only quant
+- pack/dequant kernel
+- weight-only GEMV
+- GPTQ/AWQ/FP8 tradeoff
+- bit packing 和 quant math coding
 
 ### 每日安排
 
 | Day | 上午（3h） | 下午（2h） | 晚上（1.5h） |
 |-----|-----------|-----------|-------------|
-| 43 | Mock #3 + 复盘 | 项目 README 最终版 | 简历初稿 |
-| 44 | Mock #4 + 复盘 | 补课（根据 mock 暴露的问题） | 简历修改 |
-| 45 | Mock #5 + 复盘 | 项目 demo 录屏 | LeetCode 模拟 |
-| 46 | Mock #6 + 复盘 | 补课 | 简历定稿 |
-| 47 | Mock #7 + 复盘 | 技术博客最终检查 | 投递准备 |
-| 48 | 全天系统设计练习 | 全天系统设计练习 | 复盘 |
-| 49 | 周检 + 阶段检 #4 | 阶段检 #4 | 投递计划 |
+| 44 | INT4 weight-only | quant math note | scale/zero-point |
+| 45 | INT4 pack/dequant | kernel tests | mask/dtype |
+| 46 | dequant benchmark | GB/s + overhead | speedup 分析 |
+| 47 | weight-only GEMV | toy 或设计说明 | decode 场景 |
+| 48 | GPTQ/AWQ/FP8 | tradeoff 文档 | 面试问答 |
+| 49 | 周复习 + 阶段检 | quant + bitops drill | LongCat fusion/cache mock |
 
-### Mock Interview 重点
-- 每次 mock 后记录：哪些问题答得好、哪些卡壳、哪些完全不会
-- 卡壳的问题第二天上午补课
-- 目标：到 Day 49 时 mock 得分稳定 ≥ 70
+### 关键交付物
 
-### 阶段检 #4 目标：≥ 75
+- INT4 dequant 或 weight-only GEMV benchmark
+- GPTQ/AWQ/FP8 对比文档
+- quant bit packing drill
 
----
-
-## 第 8 周：投递 + 查漏补缺
+## 第 8 周：项目包装 + JD 定制 Mock
 
 ### 主题
-- 开始投递（内推 + 官网）
-- 针对性准备（根据 JD 调整重点）
-- 保持手感（每天 1 题 LeetCode + 1 个概念复习）
+
+- benchmark 图表
+- 腾讯/小红书/美团 JD 定制准备
+- LLM serving 系统设计
+- 分布式推理设计
+- 模型基础兜底和 coding mock
+- 最终 mock
 
 ### 每日安排
 
 | Day | 上午 | 下午 | 晚上 |
 |-----|------|------|------|
-| 50 | 投递 3-5 家 | 针对字节 JD 准备 | LeetCode |
-| 51 | Mock（字节风格） | 补课 | 投递 |
-| 52 | 针对腾讯 JD 准备 | Mock（腾讯风格） | 投递 |
-| 53 | 针对小红书 JD 准备 | Mock（小红书风格） | 投递 |
-| 54 | 针对美团 JD 准备 | Mock（美团风格） | 投递 |
-| 55 | 全天复习薄弱点 | 全天复习薄弱点 | 休息 |
-| 56 | 最终 mock | 复盘总结 | 准备面试 |
+| 50 | benchmark 图表 | README 更新 | baseline/metric/badcase 表 |
+| 51 | 腾讯 JD 问答 | CUDA/CUTLASS/vLLM mock | 模型基础 |
+| 52 | 小红书 JD 问答 | Mooncake/RBG/dynamic PD mock | 模型基础 |
+| 53 | 美团 JD 问答 | LongCat/MoE/fusion mock | 模型基础 |
+| 54 | 1000 QPS serving design | p50/p99/throughput | 复盘 |
+| 55 | TP/PP/PD/KV routing design | 故障与扩缩容 | 复盘 |
+| 56 | coding + 系统设计 mock | 终版评分 | 投递 next action |
 
-### 投递策略
-- 优先内推（找人脉、脉脉、牛客）
-- 同时官网投递
-- 每家公司投递前针对性准备 1-2 小时（读 JD、准备相关项目故事）
-- 面试后立即复盘记录
+### 关键交付物
 
----
-
-## 关键资源汇总
-
-### 必读源码
-- vLLM: scheduler.py, block_manager.py, attention_kernels.cu
-- SGLang: radix_cache.py, scheduler.py
-- DeepGEMM: FP8 GEMM 实现
-
-### 必读论文
-- FlashAttention 1 & 2 (Dao et al.)
-- PagedAttention / vLLM (Kwon et al.)
-- Orca (Yu et al.)
-- Speculative Decoding (Leviathan et al.)
-- GPTQ (Frantar et al.) / AWQ (Lin et al.)
-- Megatron-LM (Shoeybi et al.)
-- DistServe (Zhong et al.)
-- DeepSeek-V3 Technical Report
-
-### 必做项目
-- Kernel Lab: reduction, softmax, GEMM, FlashAttention, RMSNorm, INT4 dequant
-- Mini Inference Engine 或 开源 PR
-- Benchmark + Roofline 分析报告
-
-### 学习社区
-- 牛客网 AI Infra 面经
-- 知乎 AI Infra 专栏
-- GitHub: vLLM, SGLang, Megatron-LM, CUTLASS
-- 博客园: cnblogs.com/xmwblogs (AI infra 面试收录)
+- README benchmark 图
+- 三家公司定制问答
+- 2 个系统设计稿
+- coding、模型基础、项目深挖最终 mock 评分和补课清单

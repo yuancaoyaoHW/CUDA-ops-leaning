@@ -1,525 +1,1119 @@
+meta:
+  title: 大模型推理框架/加速 8 周计划
+  primary_roles:
+    - 腾讯混元-大模型推理加速工程师
+    - 小红书-大模型推理框架研发
+    - 美团-大模型推理
+  focus_weights:
+    kernel: 45
+    framework: 30
+    perf: 15
+    quant: 7
+    interview: 3
+  jd_tags:
+    kernel: CUDA/Triton/CUTLASS/算子实现
+    framework: vLLM/SGLang/TensorRT-LLM/ONNX Runtime
+    serving: KV cache、scheduler、batching、PD 分离、容错
+    perf: benchmark、Nsight、吞吐/延迟、瓶颈分析
+    quant: INT4/FP8/GPTQ/AWQ/压缩
+    docs: 源码走读、系统图、README、技术文档
+    interview: mock、系统设计、项目 STAR、岗位问答
+  milestones:
+    - day: 14
+      text: 2 个推理相关算子有 tests + benchmark；至少 1 个有 profile
+    - day: 28
+      text: 能讲清 softmax/RMSNorm/GEMM/attention 的性能瓶颈；有 attention toy
+    - day: 42
+      text: 能讲清 vLLM/SGLang scheduler、Mooncake/RBG/external KV、LongCat/MoE/fusion、PD/EPD 分离
+    - day: 56
+      text: README、benchmark 图、系统设计稿、腾讯/小红书/美团定制问答、coding drill、模型基础兜底齐全
+operators:
+  vector_add:
+    status: benchmark_stage
+    artifacts:
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: true
+      note: true
+    notes: 已有 Triton 实现、测试、benchmark、nsys 记录和学习笔记。
+  axpy:
+    status: benchmark_stage
+    artifacts:
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: false
+      note: partial
+    notes: 已有实现、测试、benchmark；笔记需要整理为标准 operator note。
+  row_sum:
+    status: complete
+    artifacts:
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: true
+      note: true
+    notes: 已有 ncu profile，结论为 memory-bound。
+  row_max:
+    status: profile_stage
+    artifacts:
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: true
+      note: partial
+    notes: masked values 使用 -inf；note 需要补齐 benchmark 数据。
+  row_softmax:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+  rmsnorm:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+  flash_attention_toy:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+  int4_dequant:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+gpu_libraries:
+  triton:
+    status: in_progress
+    evidence:
+      - vector_add
+      - axpy
+      - row_sum
+      - row_max
+  cuda_extension:
+    status: not_started
+    evidence: []
+  cublas_or_pytorch_gemm:
+    status: not_started
+    evidence: []
+  cutlass:
+    status: not_started
+    evidence: []
+  nsight_systems:
+    status: in_progress
+    evidence:
+      - reports/nsys/bench_vector_add_20260517_094034.nsys-rep
+      - reports/nsys/bench_row_sum_20260517_194054.nsys-rep
+  nsight_compute:
+    status: in_progress
+    evidence:
+      - reports/ncu/row_sum_one_kernel.ncu-rep
+      - reports/ncu/row_max_one_kernel.ncu-rep
+  tensorrt_llm_concepts:
+    status: not_started
+    evidence: []
+
 week1:
   day01:
-    date: ''
+    title: 仓库校准 + Nsight Compute WSL2 验证
+    date: '2026-06-01'
     status: not_started
     daily_check: 0
+    jd_tags: [perf, docs]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      audit_existing_kernels: false
+      map_operator_maturity: false
+      validate_ncu_wsl2: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: GPU 加速库、算子能力薄弱；当前进度记录和真实产物不同步。
+    next_fix: 先确认 ncu 是否能采集硬件计数器，再进入 row_softmax 闭环。
     notes: ''
   day02:
-    date: ''
+    title: row_softmax PyTorch reference + Triton skeleton
+    date: '2026-06-02'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      write_reference: false
+      write_triton_skeleton: false
+      record_addressing: false
+    artifacts:
+      reference: false
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day03:
-    date: ''
+    title: row_softmax correctness tests
+    date: '2026-06-03'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      aligned_tests: false
+      non_aligned_tests: false
+      dtype_and_mask_tests: false
+    artifacts:
+      tests: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day04:
-    date: ''
+    title: row_softmax benchmark
+    date: '2026-06-04'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      write_benchmark: false
+      compare_torch: false
+      compute_gbs: false
+    artifacts:
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day05:
-    date: ''
+    title: row_softmax Nsight Compute
+    date: '2026-06-05'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      isolate_one_kernel: false
+      run_ncu: false
+      write_bottleneck_note: false
+    artifacts:
+      profile: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day06:
-    date: ''
+    title: softmax 闭卷复现 + note
+    date: '2026-06-06'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, docs]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      closed_book_kernel: false
+      explain_masking: false
+      finalize_note: false
+    artifacts:
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day07:
-    date: ''
+    title: Week 1 周检 + STAR
+    date: '2026-06-07'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning_review: false
-      afternoon_mock: false
-      evening_prep: false
+      handwrite_softmax: false
+      oral_mock: false
+      topk_heap_drill: false
+      cpp_raii_move_review: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week2:
   day08:
-    date: ''
+    title: RMSNorm reference + Triton 实现
+    date: '2026-06-08'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      write_reference: false
+      implement_rmsnorm: false
+      record_formula: false
+    artifacts:
+      reference: false
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day09:
-    date: ''
+    title: fused add RMSNorm
+    date: '2026-06-09'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      implement_fusion: false
+      compare_unfused: false
+      record_memory_traffic: false
+    artifacts:
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day10:
-    date: ''
+    title: RMSNorm tests
+    date: '2026-06-10'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      dtype_tests: false
+      hidden_size_tests: false
+      error_tests: false
+    artifacts:
+      tests: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day11:
-    date: ''
+    title: RMSNorm benchmark
+    date: '2026-06-11'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      write_benchmark: false
+      compare_unfused: false
+      compute_gbs: false
+    artifacts:
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day12:
-    date: ''
+    title: 最小 PyTorch C++/CUDA extension
+    date: '2026-06-12'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      inspect_existing_script: false
+      run_or_update_extension_demo: false
+      document_build_path: false
+    artifacts:
+      implementation: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day13:
-    date: ''
+    title: CUDA extension pytest + note
+    date: '2026-06-13'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, docs]
     tasks:
-      morning_kernel: false
-      afternoon_theory: false
-      evening_distributed: false
+      add_or_run_test: false
+      record_failure_modes: false
+      write_cuda_extension_note: false
+    artifacts:
+      tests: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day14:
-    date: ''
+    title: Week 2 阶段检 + STAR
+    date: '2026-06-14'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning_review: false
-      afternoon_mock: false
-      evening_stage: false
+      operator_mock: false
+      cuda_extension_mock: false
+      lru_or_queue_drill: false
+      cpp_smart_pointer_review: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week3:
   day15:
-    date: ''
+    title: GEMM baseline
+    date: '2026-06-15'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      build_gemm_benchmark: false
+      run_pytorch_baseline: false
+      record_shapes: false
+    artifacts:
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day16:
-    date: ''
+    title: GEMM shape sweep
+    date: '2026-06-16'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      sweep_mnk: false
+      sweep_dtype: false
+      compute_tflops: false
+    artifacts:
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day17:
-    date: ''
+    title: CUTLASS profiler 入门
+    date: '2026-06-17'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      locate_cutlass_tools: false
+      run_or_document_profiler: false
+      write_cutlass_note: false
+    artifacts:
+      profile: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day18:
-    date: ''
+    title: GEMM roofline
+    date: '2026-06-18'
     status: not_started
     daily_check: 0
+    jd_tags: [perf, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      compute_arithmetic_intensity: false
+      create_roofline_table: false
+      identify_bottleneck: false
+    artifacts:
+      docs: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day19:
-    date: ''
+    title: epilogue/fusion 概念
+    date: '2026-06-19'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      study_epilogue: false
+      map_bias_activation_fusion: false
+      write_interview_note: false
+    artifacts:
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day20:
-    date: ''
+    title: GEMM 面试复盘
+    date: '2026-06-20'
     status: not_started
     daily_check: 0
+    jd_tags: [interview, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      compare_cublas_cutlass_triton: false
+      oral_mock: false
+      record_gaps: false
+    artifacts:
+      mock: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day21:
-    date: ''
+    title: Week 3 周检 + buffer + STAR
+    date: '2026-06-21'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      gemm_mock: false
+      cutlass_mock: false
+      nsight_mock: false
+      merge_k_sorted_drill: false
+      cpp_cache_locality_review: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week4:
   day22:
-    date: ''
+    title: Attention 数学与 PyTorch SDPA
+    date: '2026-06-22'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      write_sdpa_reference: false
+      choose_shapes: false
+      record_attention_math: false
+    artifacts:
+      reference: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day23:
-    date: ''
+    title: online softmax 推导
+    date: '2026-06-23'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      derive_online_update: false
+      closed_book_derivation: false
+      record_numerical_stability: false
+    artifacts:
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day24:
-    date: ''
+    title: FlashAttention forward toy skeleton
+    date: '2026-06-24'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      implement_block_loop: false
+      implement_online_softmax_state: false
+      record_addressing: false
+    artifacts:
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day25:
-    date: ''
+    title: FlashAttention correctness
+    date: '2026-06-25'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      small_shape_tests: false
+      mask_tests: false
+      tolerance_note: false
+    artifacts:
+      tests: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day26:
-    date: ''
+    title: FlashAttention benchmark
+    date: '2026-06-26'
     status: not_started
     daily_check: 0
+    jd_tags: [kernel, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      benchmark_sdpa: false
+      compare_shapes: false
+      explain_slowdown: false
+    artifacts:
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day27:
-    date: ''
+    title: decode attention / prefill vs decode
+    date: '2026-06-27'
     status: not_started
     daily_check: 0
+    jd_tags: [serving, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      compare_prefill_decode: false
+      map_decode_bottleneck: false
+      write_note: false
+    artifacts:
+      docs: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day28:
-    date: ''
+    title: Week 4 阶段检 + buffer + STAR
+    date: '2026-06-28'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      attention_kernel_mock: false
+      performance_mock: false
+      longest_common_substring_drill: false
+      cuda_stream_event_graph_review: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week5:
   day29:
-    date: ''
+    title: KV cache layout
+    date: '2026-06-29'
     status: not_started
     daily_check: 0
+    jd_tags: [serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      implement_contiguous_kv_toy: false
+      compute_memory_footprint: false
+      write_layout_note: false
+    artifacts:
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day30:
-    date: ''
+    title: paged KV block table
+    date: '2026-06-30'
     status: not_started
     daily_check: 0
+    jd_tags: [serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      implement_block_table: false
+      test_mapping: false
+      record_page_tradeoff: false
+    artifacts:
+      implementation: false
+      tests: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day31:
-    date: ''
+    title: PagedAttention 数据流
+    date: '2026-07-01'
     status: not_started
     daily_check: 0
+    jd_tags: [serving, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      draw_access_flow: false
+      explain_fragmentation: false
+      write_block_table_doc: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day32:
-    date: ''
+    title: continuous batching toy scheduler
+    date: '2026-07-02'
     status: not_started
     daily_check: 0
+    jd_tags: [serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      model_prefill_queue: false
+      model_decode_queue: false
+      simulate_steps: false
+    artifacts:
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day33:
-    date: ''
+    title: chunked prefill + KV cache 压缩 + 排障指标
+    date: '2026-07-03'
     status: not_started
     daily_check: 0
+    jd_tags: [serving, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      define_ttft_tpot_itl: false
+      run_workload_simulation: false
+      write_troubleshooting_playbook: false
+    artifacts:
+      implementation: false
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day34:
-    date: ''
+    title: Speculative Decoding + N-gram cache
+    date: '2026-07-04'
     status: not_started
     daily_check: 0
+    jd_tags: [perf, serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      draft_verify_toy: false
+      acceptance_rate_analysis: false
+      ngram_cache_note: false
+    artifacts:
+      implementation: false
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day35:
-    date: ''
+    title: Week 5 周检 + STAR
+    date: '2026-07-05'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      kv_cache_mock: false
+      paged_attention_mock: false
+      scheduler_mock: false
+      speculative_decoding_mock: false
+      producer_consumer_drill: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week6:
   day36:
-    date: ''
+    title: vLLM architecture
+    date: '2026-07-06'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      draw_engine_flow: false
+      identify_scheduler_entry: false
+      record_5min_script: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day37:
-    date: ''
+    title: vLLM scheduler 深挖
+    date: '2026-07-07'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      trace_schedule_step: false
+      document_preemption: false
+      compare_continuous_batching: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day38:
-    date: ''
+    title: vLLM KV/block manager
+    date: '2026-07-08'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      trace_block_lifecycle: false
+      map_allocation_failure: false
+      connect_to_paged_attention: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day39:
-    date: ''
+    title: SGLang architecture
+    date: '2026-07-09'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      draw_sglang_flow: false
+      compare_vllm: false
+      write_framework_table: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day40:
-    date: ''
+    title: RadixAttention + Mooncake/RBG/external KVCache
+    date: '2026-07-10'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, serving]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      study_radix_attention: false
+      map_mooncake_external_kv: false
+      write_xhs_platform_doc: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day41:
-    date: ''
+    title: TensorRT-LLM + Meituan LongCat MoE/fusion
+    date: '2026-07-11'
     status: not_started
     daily_check: 0
+    jd_tags: [framework, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      study_inflight_batching: false
+      study_moe_topk_fusion: false
+      write_longcat_note: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day42:
-    date: ''
+    title: 分布式推理基础 + KV Router/dynamic PD
+    date: '2026-07-12'
     status: not_started
     daily_check: 0
-    weekly_check_score: 0
-    stage_check_score: 0
+    jd_tags: [serving, framework]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      tp_pp_pd_comm_model: false
+      kv_router_dynamic_pd: false
+      draw_distributed_serving_architecture: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week7:
   day43:
-    date: ''
+    title: Week 6 阶段检 + STAR
+    date: '2026-07-13'
     status: not_started
     daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      framework_model_fundamentals_mock: false
+      mooncake_rbg_mock: false
+      longcat_moe_fusion_mock: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day44:
-    date: ''
+    title: INT4 weight-only quant 基础
+    date: '2026-07-14'
     status: not_started
     daily_check: 0
+    jd_tags: [quant, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      derive_quant_math: false
+      explain_scale_zero_point: false
+      write_quant_note: false
+    artifacts:
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day45:
-    date: ''
+    title: INT4 pack/dequant Triton
+    date: '2026-07-15'
     status: not_started
     daily_check: 0
+    jd_tags: [quant, kernel]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      implement_pack: false
+      implement_dequant: false
+      add_tests: false
+    artifacts:
+      implementation: false
+      tests: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day46:
-    date: ''
+    title: INT4 dequant benchmark
+    date: '2026-07-16'
     status: not_started
     daily_check: 0
+    jd_tags: [quant, perf]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      benchmark_dequant: false
+      compute_gbs: false
+      analyze_overhead: false
+    artifacts:
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day47:
-    date: ''
+    title: weight-only GEMV
+    date: '2026-07-17'
     status: not_started
     daily_check: 0
+    jd_tags: [quant, kernel]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      design_gemv_toy: false
+      implement_or_document: false
+      connect_to_decode: false
+    artifacts:
+      implementation: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day48:
-    date: ''
+    title: GPTQ vs AWQ vs FP8
+    date: '2026-07-18'
     status: not_started
     daily_check: 0
+    jd_tags: [quant, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      compare_gptq_awq: false
+      summarize_fp8: false
+      write_tradeoff_doc: false
+    artifacts:
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day49:
-    date: ''
+    title: Week 7 阶段检 + buffer + STAR
+    date: '2026-07-19'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      quant_mock: false
+      quant_bitops_drill: false
+      longcat_fusion_cache_mock: false
+      project_star_metrics: false
+      star_metrics_entry: false
+    artifacts:
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
+
 week8:
   day50:
-    date: ''
+    title: 项目 README + benchmark 图表
+    date: '2026-07-20'
     status: not_started
     daily_check: 0
+    jd_tags: [perf, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      collect_metrics: false
+      draw_charts: false
+      write_badcase_log: false
+      update_readme_metrics_table: false
+    artifacts:
+      benchmark: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day51:
-    date: ''
+    title: 腾讯 JD 定制准备
+    date: '2026-07-21'
     status: not_started
     daily_check: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      map_tencent_requirements: false
+      cuda_cutlass_tensorrt_answers: false
+      vllm_perf_troubleshooting_mock: false
+      model_basics_review: false
+    artifacts:
+      mock: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day52:
-    date: ''
+    title: 小红书 JD 定制准备
+    date: '2026-07-22'
     status: not_started
     daily_check: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      map_xhs_requirements: false
+      mooncake_rbg_answers: false
+      kv_router_dynamic_pd_mock: false
+      model_basics_review: false
+    artifacts:
+      mock: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day53:
-    date: ''
+    title: 美团 JD 定制准备
+    date: '2026-07-23'
     status: not_started
     daily_check: 0
+    jd_tags: [interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      map_meituan_requirements: false
+      longcat_moe_fusion_answers: false
+      compression_deploy_mock: false
+      model_basics_review: false
+    artifacts:
+      mock: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day54:
-    date: ''
+    title: LLM serving 系统设计
+    date: '2026-07-24'
     status: not_started
     daily_check: 0
+    jd_tags: [serving, interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      design_1000_qps_serving: false
+      discuss_ttft_tpot_p99: false
+      run_design_mock: false
+    artifacts:
+      docs: false
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day55:
-    date: ''
+    title: 分布式推理设计深化
+    date: '2026-07-25'
     status: not_started
     daily_check: 0
+    jd_tags: [serving, interview]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      design_tp_pp_pd: false
+      design_kv_routing: false
+      design_dynamic_pd_epd: false
+      discuss_failure_recovery: false
+    artifacts:
+      docs: false
+      mock: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''
   day56:
-    date: ''
+    title: 最终 mock + 投递准备
+    date: '2026-07-26'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
+    jd_tags: [interview, docs]
     tasks:
-      morning: false
-      afternoon: false
-      evening: false
+      run_final_mock: false
+      coding_drill: false
+      model_basics_mock: false
+      score_readiness: false
+      write_next_action_list: false
+    artifacts:
+      mock: false
+      docs: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
     notes: ''

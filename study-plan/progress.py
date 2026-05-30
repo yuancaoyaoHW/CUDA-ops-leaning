@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""
-AI Infra 学习进度可视化工具
+"""AI Infra inference acceleration study progress tool.
 
-用法:
-    python3 progress.py          # 显示总览仪表盘
-    python3 progress.py week     # 显示当前周详情
-    python3 progress.py update   # 交互式更新今天的进度
-    python3 progress.py history  # 显示日检/周检分数趋势
+Usage:
+    python study-plan/progress.py
+    python study-plan/progress.py week
+    python study-plan/progress.py history
+    python study-plan/progress.py analyze
+    python study-plan/progress.py update
 """
+
+from __future__ import annotations
 
 import sys
-import os
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
+from typing import Any
 
 try:
     import yaml
@@ -20,9 +22,20 @@ except ImportError:
     print("需要安装 PyYAML: pip install pyyaml")
     sys.exit(1)
 
-PROGRESS_FILE = Path(__file__).parent / "progress.yaml"
 
-# ─── 颜色定义 ───────────────────────────────────────────────────────────────
+PROGRESS_FILE = Path(__file__).parent / "progress.yaml"
+TAG_ORDER = ["kernel", "framework", "serving", "perf", "quant", "docs", "interview"]
+ARTIFACT_ORDER = [
+    "reference",
+    "implementation",
+    "tests",
+    "benchmark",
+    "profile",
+    "note",
+    "docs",
+    "mock",
+]
+
 
 class C:
     RESET = "\033[0m"
@@ -32,416 +45,398 @@ class C:
     GREEN = "\033[32m"
     YELLOW = "\033[33m"
     BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
     CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    BG_GREEN = "\033[42m"
-    BG_YELLOW = "\033[43m"
-    BG_RED = "\033[41m"
-    BG_BLUE = "\033[44m"
 
 
-# ─── 数据加载 ───────────────────────────────────────────────────────────────
-
-def load_progress():
+def load_progress() -> dict[str, Any]:
     if not PROGRESS_FILE.exists():
         print(f"{C.RED}找不到 progress.yaml{C.RESET}")
         sys.exit(1)
-    with open(PROGRESS_FILE) as f:
+    with open(PROGRESS_FILE, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def save_progress(data):
-    with open(PROGRESS_FILE, "w") as f:
-        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+def save_progress(data: dict[str, Any]) -> None:
+    with open(PROGRESS_FILE, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
 
 
-# ─── 统计计算 ───────────────────────────────────────────────────────────────
+def truthy(value: Any) -> bool:
+    return value is True or value == "true" or value == "complete"
 
-def get_all_days(data):
-    """提取所有天的数据，按顺序"""
-    days = []
-    for week_key in sorted(data.keys()):
-        if not week_key.startswith("week"):
-            continue
-        week_data = data[week_key]
-        if not week_data:
-            continue
-        for day_key in sorted(week_data.keys(), key=lambda x: int(x.replace("day", ""))):
-            day_data = week_data[day_key]
+
+def week_sort_key(week_key: str) -> int:
+    return int(week_key.replace("week", ""))
+
+
+def day_sort_key(day_key: str) -> int:
+    return int(day_key.replace("day", ""))
+
+
+def get_all_days(data: dict[str, Any]) -> list[dict[str, Any]]:
+    days: list[dict[str, Any]] = []
+    for week_key in sorted((k for k in data if k.startswith("week")), key=week_sort_key):
+        week_data = data.get(week_key) or {}
+        for day_key in sorted(week_data.keys(), key=day_sort_key):
+            day_data = dict(week_data[day_key])
             day_data["_week"] = week_key
             day_data["_day"] = day_key
-            day_data["_num"] = int(day_key.replace("day", ""))
+            day_data["_num"] = day_sort_key(day_key)
             days.append(day_data)
     return days
 
 
-def count_stats(days):
-    total = len(days)
-    done = sum(1 for d in days if d.get("status") == "done")
-    in_progress = sum(1 for d in days if d.get("status") == "in_progress")
-    skipped = sum(1 for d in days if d.get("status") == "skipped")
-    not_started = total - done - in_progress - skipped
-    return {"total": total, "done": done, "in_progress": in_progress,
-            "skipped": skipped, "not_started": not_started}
-
-
-def get_task_completion(days):
-    """计算子任务完成率"""
-    total_tasks = 0
-    done_tasks = 0
-    for d in days:
-        tasks = d.get("tasks", {})
-        for v in tasks.values():
-            total_tasks += 1
-            if v:
-                done_tasks += 1
-    return done_tasks, total_tasks
-
-
-# ─── 可视化组件 ──────────────────────────────────────────────────────────────
-
-def progress_bar(current, total, width=40, label="", color=C.GREEN):
-    if total == 0:
-        pct = 0
-    else:
-        pct = current / total
-    filled = int(width * pct)
-    bar = "█" * filled + "░" * (width - filled)
-    pct_str = f"{pct*100:.1f}%"
-    print(f"  {label:<20} {color}{bar}{C.RESET} {pct_str} ({current}/{total})")
-
-
-def status_icon(status):
+def status_icon(status: str) -> str:
     icons = {
         "done": f"{C.GREEN}✓{C.RESET}",
         "in_progress": f"{C.YELLOW}◐{C.RESET}",
-        "skipped": f"{C.RED}✗{C.RESET}",
+        "blocked": f"{C.RED}!{C.RESET}",
+        "skipped": f"{C.RED}x{C.RESET}",
         "not_started": f"{C.DIM}○{C.RESET}",
     }
     return icons.get(status, "?")
 
 
-def daily_check_bar(score):
-    """日检分数可视化 (0-3)"""
-    if score == 0:
+def daily_check_bar(score: int) -> str:
+    if score <= 0:
         return f"{C.DIM}○○○{C.RESET}"
-    elif score == 1:
+    if score == 1:
         return f"{C.RED}●{C.RESET}{C.DIM}○○{C.RESET}"
-    elif score == 2:
+    if score == 2:
         return f"{C.YELLOW}●●{C.RESET}{C.DIM}○{C.RESET}"
-    else:
-        return f"{C.GREEN}●●●{C.RESET}"
+    return f"{C.GREEN}●●●{C.RESET}"
 
 
-# ─── 主视图 ──────────────────────────────────────────────────────────────────
+def progress_bar(done: int, total: int, width: int = 28, color: str = C.GREEN) -> str:
+    pct = done / total if total else 0
+    filled = int(width * pct)
+    return f"{color}{'█' * filled}{C.DIM}{'░' * (width - filled)}{C.RESET} {pct * 100:5.1f}% ({done}/{total})"
 
-def show_dashboard(data):
+
+def count_stats(days: list[dict[str, Any]]) -> dict[str, int]:
+    statuses = {"done": 0, "in_progress": 0, "blocked": 0, "skipped": 0, "not_started": 0}
+    for day in days:
+        status = day.get("status", "not_started")
+        statuses[status] = statuses.get(status, 0) + 1
+    statuses["total"] = len(days)
+    return statuses
+
+
+def task_completion(days: list[dict[str, Any]]) -> tuple[int, int]:
+    done = 0
+    total = 0
+    for day in days:
+        for value in (day.get("tasks") or {}).values():
+            total += 1
+            done += int(truthy(value))
+    return done, total
+
+
+def artifact_completion(days: list[dict[str, Any]]) -> tuple[int, int]:
+    done = 0
+    total = 0
+    for day in days:
+        for value in (day.get("artifacts") or {}).values():
+            total += 1
+            done += int(truthy(value))
+    return done, total
+
+
+def tag_coverage(days: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    coverage = {tag: {"planned": 0, "done": 0} for tag in TAG_ORDER}
+    for day in days:
+        for tag in day.get("jd_tags") or []:
+            if tag not in coverage:
+                coverage[tag] = {"planned": 0, "done": 0}
+            coverage[tag]["planned"] += 1
+            if day.get("status") == "done":
+                coverage[tag]["done"] += 1
+    return coverage
+
+
+def operator_maturity(data: dict[str, Any]) -> list[tuple[str, int, int, str]]:
+    result = []
+    for name, info in (data.get("operators") or {}).items():
+        artifacts = info.get("artifacts") or {}
+        total = len(artifacts)
+        done = sum(1 for value in artifacts.values() if truthy(value))
+        result.append((name, done, total, info.get("status", "unknown")))
+    return result
+
+
+def gpu_library_coverage(data: dict[str, Any]) -> list[tuple[str, str, int]]:
+    result = []
+    for name, info in (data.get("gpu_libraries") or {}).items():
+        evidence = info.get("evidence") or []
+        result.append((name, info.get("status", "unknown"), len(evidence)))
+    return result
+
+
+def current_day(days: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for day in days:
+        if day.get("status") in ("not_started", "in_progress", "blocked"):
+            return day
+    return None
+
+
+def print_tag_coverage(days: list[dict[str, Any]]) -> None:
+    print(f"  {C.BOLD}JD 标签覆盖度{C.RESET}")
+    coverage = tag_coverage(days)
+    for tag in TAG_ORDER:
+        item = coverage.get(tag, {"planned": 0, "done": 0})
+        print(f"  {tag:<10} {progress_bar(item['done'], item['planned'], color=C.BLUE)}")
+    print()
+
+
+def print_operator_maturity(data: dict[str, Any]) -> None:
+    print(f"  {C.BOLD}算子成熟度{C.RESET}")
+    for name, done, total, status in operator_maturity(data):
+        color = C.GREEN if done == total else C.YELLOW if done else C.DIM
+        print(f"  {name:<22} {progress_bar(done, total, color=color)}  {status}")
+    print()
+
+
+def print_gpu_library_coverage(data: dict[str, Any]) -> None:
+    print(f"  {C.BOLD}GPU 加速库覆盖{C.RESET}")
+    for name, status, evidence_count in gpu_library_coverage(data):
+        if status in ("complete", "done"):
+            color = C.GREEN
+        elif status == "in_progress":
+            color = C.YELLOW
+        else:
+            color = C.DIM
+        print(f"  {color}{name:<24}{C.RESET} status={status:<12} evidence={evidence_count}")
+    print()
+
+
+def show_dashboard(data: dict[str, Any]) -> None:
     days = get_all_days(data)
     stats = count_stats(days)
-    tasks_done, tasks_total = get_task_completion(days)
+    tasks_done, tasks_total = task_completion(days)
+    artifacts_done, artifacts_total = artifact_completion(days)
 
     print()
-    print(f"  {C.BOLD}{C.CYAN}╔══════════════════════════════════════════════════════╗{C.RESET}")
-    print(f"  {C.BOLD}{C.CYAN}║       AI Infra 8 周学习计划 - 进度仪表盘            ║{C.RESET}")
-    print(f"  {C.BOLD}{C.CYAN}╚══════════════════════════════════════════════════════╝{C.RESET}")
+    print(f"  {C.BOLD}{C.CYAN}大模型推理框架/加速 8 周计划{C.RESET}")
+    print()
+    print(f"  天数完成   {progress_bar(stats.get('done', 0), stats['total'])}")
+    print(f"  子任务完成 {progress_bar(tasks_done, tasks_total, color=C.BLUE)}")
+    print(f"  产物完成   {progress_bar(artifacts_done, artifacts_total, color=C.YELLOW)}")
     print()
 
-    # 总体进度
-    print(f"  {C.BOLD}📊 总体进度{C.RESET}")
-    progress_bar(stats["done"], stats["total"], label="天数完成")
-    progress_bar(tasks_done, tasks_total, label="子任务完成", color=C.BLUE)
-    print()
-
-    # 每周进度条
-    print(f"  {C.BOLD}📅 每周进度{C.RESET}")
+    print(f"  {C.BOLD}每周进度{C.RESET}")
     for week_num in range(1, 9):
-        week_key = f"week{week_num}"
-        week_data = data.get(week_key, {})
-        if not week_data:
-            continue
-        week_days = [week_data[k] for k in sorted(week_data.keys(), key=lambda x: int(x.replace("day", "")))]
+        week_days = [d for d in days if d["_week"] == f"week{week_num}"]
         done = sum(1 for d in week_days if d.get("status") == "done")
-        total = len(week_days)
-
-        # 每天的状态图标
-        day_icons = " ".join(status_icon(d.get("status", "not_started")) for d in week_days)
-        pct = done / total * 100 if total > 0 else 0
-
-        # 周检分数
-        last_day = week_days[-1] if week_days else {}
-        weekly_score = last_day.get("weekly_check_score", "")
-        weekly_str = f" 周检:{weekly_score}/21" if weekly_score else ""
-
-        print(f"  Week {week_num}: {day_icons}  {C.DIM}{pct:.0f}%{C.RESET}{weekly_str}")
-
+        icons = " ".join(status_icon(d.get("status", "not_started")) for d in week_days)
+        print(f"  W{week_num}: {icons}  {progress_bar(done, len(week_days), width=12)}")
     print()
 
-    # 日检趋势
-    daily_scores = [(d["_num"], d.get("daily_check", 0)) for d in days if d.get("daily_check", 0) > 0]
-    if daily_scores:
-        print(f"  {C.BOLD}📈 日检分数趋势{C.RESET}")
-        print(f"  ", end="")
-        for day_num, score in daily_scores[-14:]:  # 最近 14 天
-            print(f"D{day_num:02d}{daily_check_bar(score)} ", end="")
-        print()
-        avg = sum(s for _, s in daily_scores) / len(daily_scores)
-        print(f"  平均: {avg:.1f}/3")
-        print()
+    print_tag_coverage(days)
+    print_operator_maturity(data)
+    print_gpu_library_coverage(data)
 
-    # 阶段检分数
-    stage_scores = []
-    for d in days:
-        if d.get("stage_check_score"):
-            stage_scores.append((d["_num"], d["stage_check_score"]))
-    if stage_scores:
-        print(f"  {C.BOLD}🎯 阶段检分数{C.RESET}")
-        for day_num, score in stage_scores:
-            color = C.GREEN if score >= 70 else C.YELLOW if score >= 60 else C.RED
-            bar_len = int(score / 100 * 30)
-            bar = "█" * bar_len + "░" * (30 - bar_len)
-            print(f"  Day {day_num:02d}: {color}{bar}{C.RESET} {score}/100 {'✓' if score >= 70 else '✗'}")
+    next_day = current_day(days)
+    if next_day:
+        tags = ", ".join(next_day.get("jd_tags") or [])
+        print(f"  {C.BOLD}下一步{C.RESET}")
+        print(f"  Day {next_day['_num']:02d}: {next_day.get('title', '')}")
+        print(f"  tags: {tags}")
+        if next_day.get("next_fix"):
+            print(f"  next_fix: {next_day['next_fix']}")
         print()
 
-    # 里程碑检查
-    print(f"  {C.BOLD}🏁 里程碑{C.RESET}")
-    milestones = [
-        (7, "5 个 kernel 有 benchmark；闭卷写 reduction + softmax"),
-        (14, "FlashAttention 通过正确性测试；vLLM 流程图完成"),
-        (21, "INT4 dequant kernel 有 benchmark；SGLang 对比文档"),
-        (28, "Mini inference engine 可运行 或 PR 已提交"),
-        (35, "GitHub repo README 有完整 benchmark 图表"),
-        (42, "Mock interview ≥ 60 分"),
-        (49, "Mock interview ≥ 70 分；论文 5 分钟串讲"),
-        (56, "Mock interview ≥ 75 分；简历定稿；开始投递"),
-    ]
-    for day_num, desc in milestones:
-        day_data = next((d for d in days if d["_num"] == day_num), None)
-        if day_data and day_data.get("status") == "done":
-            icon = f"{C.GREEN}✓{C.RESET}"
-        elif day_data and day_data.get("status") in ("in_progress",):
-            icon = f"{C.YELLOW}◐{C.RESET}"
-        else:
-            # 检查是否已过期
-            done_days = [d["_num"] for d in days if d.get("status") == "done"]
-            if done_days and max(done_days) > day_num:
-                icon = f"{C.RED}✗{C.RESET}"
-            else:
-                icon = f"{C.DIM}○{C.RESET}"
-        print(f"  {icon} W{(day_num-1)//7+1} Day {day_num:02d}: {desc}")
 
-    print()
-
-
-def show_week_detail(data):
-    """显示当前周的详细信息"""
+def show_week_detail(data: dict[str, Any]) -> None:
     days = get_all_days(data)
-
-    # 找到当前周（第一个有 in_progress 或最后一个 done 的周）
-    current_week = 1
-    for d in days:
-        if d.get("status") in ("in_progress", "done"):
-            current_week = int(d["_week"].replace("week", ""))
-
-    week_key = f"week{current_week}"
-    week_data = data.get(week_key, {})
+    current = current_day(days)
+    current_week = current["_week"] if current else "week8"
+    week_days = [d for d in days if d["_week"] == current_week]
 
     print()
-    print(f"  {C.BOLD}{C.CYAN}Week {current_week} 详情{C.RESET}")
-    print(f"  {'─' * 50}")
-
-    day_titles = {
-        1: "Parallel Reduction", 2: "Online Softmax", 3: "Tiled GEMM V1",
-        4: "GEMM V2 + Double Buffering", 5: "Fused RMSNorm", 6: "Triton GEMM + Roofline",
-        7: "周复习 + 周检", 8: "FlashAttention 数学", 9: "FlashAttention Triton",
-        10: "vLLM Scheduler", 11: "Continuous Batching", 12: "Speculative Decoding",
-        13: "量化 INT4/FP8", 14: "周复习 + 阶段检",
-    }
-
-    for day_key in sorted(week_data.keys(), key=lambda x: int(x.replace("day", ""))):
-        day_data = week_data[day_key]
-        day_num = int(day_key.replace("day", ""))
-        title = day_titles.get(day_num, "")
-        status = day_data.get("status", "not_started")
-        check = day_data.get("daily_check", 0)
-        date = day_data.get("date", "")
-        tasks = day_data.get("tasks", {})
-
-        icon = status_icon(status)
-        task_str = " ".join(
-            f"{C.GREEN}■{C.RESET}" if v else f"{C.DIM}□{C.RESET}"
-            for v in tasks.values()
+    print(f"  {C.BOLD}{C.CYAN}{current_week.upper()} 详情{C.RESET}")
+    print(f"  {'-' * 72}")
+    for day in week_days:
+        tasks = day.get("tasks") or {}
+        artifacts = day.get("artifacts") or {}
+        task_done = sum(1 for v in tasks.values() if truthy(v))
+        artifact_done = sum(1 for v in artifacts.values() if truthy(v))
+        tag_str = ",".join(day.get("jd_tags") or [])
+        print(
+            f"  {status_icon(day.get('status', 'not_started'))} "
+            f"Day {day['_num']:02d}: {day.get('title', '')}"
         )
-        date_str = f" ({date})" if date else ""
-
-        print(f"  {icon} Day {day_num:02d}: {title:<30} {task_str} {daily_check_bar(check)}{date_str}")
-
-        # 如果有笔记，显示
-        notes = day_data.get("notes", "")
-        if notes:
-            print(f"       {C.DIM}└─ {notes}{C.RESET}")
-
+        print(
+            f"       tasks {task_done}/{len(tasks)} | "
+            f"artifacts {artifact_done}/{len(artifacts)} | "
+            f"check {daily_check_bar(int(day.get('daily_check', 0)))} | {tag_str}"
+        )
+        if day.get("weaknesses"):
+            print(f"       weakness: {day['weaknesses']}")
+        if day.get("next_fix"):
+            print(f"       next: {day['next_fix']}")
     print()
 
 
-def interactive_update(data):
-    """交互式更新今天的进度"""
+def show_history(data: dict[str, Any]) -> None:
     days = get_all_days(data)
+    done_days = [d for d in days if d.get("status") == "done"]
+    scores = [(d["_num"], int(d.get("daily_check", 0))) for d in done_days]
 
-    # 找到当前应该做的 day（第一个 not_started 或 in_progress）
-    current = None
-    for d in days:
-        if d.get("status") in ("not_started", "in_progress"):
-            current = d
-            break
-
-    if not current:
-        print(f"  {C.GREEN}所有天都已完成！{C.RESET}")
-        return
-
-    day_num = current["_num"]
-    week_key = current["_week"]
-    day_key = current["_day"]
-
-    print()
-    print(f"  {C.BOLD}更新 Day {day_num} 进度{C.RESET}")
-    print(f"  {'─' * 40}")
-
-    # 更新日期
-    today = datetime.now().strftime("%Y-%m-%d")
-    data[week_key][day_key]["date"] = today
-
-    # 更新子任务
-    tasks = data[week_key][day_key].get("tasks", {})
-    for task_name in tasks:
-        label = {"morning": "上午", "afternoon": "下午", "evening": "晚上",
-                 "morning_kernel": "上午(Kernel)", "afternoon_theory": "下午(理论)",
-                 "evening_distributed": "晚上(分布式)", "morning_review": "上午(复习)",
-                 "afternoon_mock": "下午(Mock)", "evening_prep": "晚上(预习)",
-                 "evening_stage": "晚上(阶段检)"}.get(task_name, task_name)
-        current_val = "✓" if tasks[task_name] else "✗"
-        resp = input(f"  {label} 完成了吗？[{current_val}] (y/n/回车跳过): ").strip().lower()
-        if resp == "y":
-            tasks[task_name] = True
-        elif resp == "n":
-            tasks[task_name] = False
-
-    # 更新日检分数
-    resp = input(f"  日检分数 (0-3, 当前={data[week_key][day_key].get('daily_check', 0)}): ").strip()
-    if resp in ("0", "1", "2", "3"):
-        data[week_key][day_key]["daily_check"] = int(resp)
-
-    # 更新状态
-    all_done = all(tasks.values())
-    if all_done:
-        data[week_key][day_key]["status"] = "done"
-        print(f"  {C.GREEN}✓ Day {day_num} 标记为完成！{C.RESET}")
-    else:
-        data[week_key][day_key]["status"] = "in_progress"
-        print(f"  {C.YELLOW}◐ Day {day_num} 标记为进行中{C.RESET}")
-
-    # 笔记
-    notes = input(f"  今日笔记/卡点 (回车跳过): ").strip()
-    if notes:
-        data[week_key][day_key]["notes"] = notes
-
-    # 周检/阶段检分数（如果是复习日）
-    if "weekly_check_score" in data[week_key][day_key]:
-        resp = input(f"  周检分数 (0-21, 回车跳过): ").strip()
-        if resp:
-            data[week_key][day_key]["weekly_check_score"] = int(resp)
-
-    if "stage_check_score" in data[week_key][day_key]:
-        resp = input(f"  阶段检分数 (0-100, 回车跳过): ").strip()
-        if resp:
-            data[week_key][day_key]["stage_check_score"] = int(resp)
-
-    save_progress(data)
-    print(f"\n  {C.GREEN}已保存！{C.RESET}")
-    print()
-
-
-def show_history(data):
-    """显示分数趋势图"""
-    days = get_all_days(data)
-
-    daily_scores = [(d["_num"], d.get("daily_check", 0)) for d in days if d.get("status") == "done"]
-
-    if not daily_scores:
+    if not scores:
         print(f"  {C.DIM}还没有完成的天数{C.RESET}")
         return
 
     print()
-    print(f"  {C.BOLD}📈 日检分数历史{C.RESET}")
-    print()
+    print(f"  {C.BOLD}日检分数历史{C.RESET}")
+    for day_num, score in scores[-28:]:
+        print(f"  D{day_num:02d} {daily_check_bar(score)} {score}/3")
+    avg = sum(score for _, score in scores) / len(scores)
+    print(f"\n  平均分: {avg:.2f}/3")
 
-    # ASCII 图表
-    max_score = 3
-    height = 6
-    width = min(len(daily_scores), 56)
-    scores_to_show = daily_scores[-width:]
-
-    for row in range(height, -1, -1):
-        threshold = row / height * max_score
-        line = f"  {threshold:.1f} │"
-        for _, score in scores_to_show:
-            if score >= threshold and score > 0:
-                if score == 3:
-                    line += f"{C.GREEN}█{C.RESET}"
-                elif score == 2:
-                    line += f"{C.YELLOW}█{C.RESET}"
-                else:
-                    line += f"{C.RED}█{C.RESET}"
-            else:
-                line += " "
-        print(line)
-
-    print(f"      └{'─' * width}")
-    # X 轴标签
-    label_line = "       "
-    for i, (day_num, _) in enumerate(scores_to_show):
-        if i % 7 == 0:
-            label_line += f"D{day_num:<5}"[0]
-        else:
-            label_line += " "
-    print(label_line)
-
-    # 统计
-    avg = sum(s for _, s in daily_scores) / len(daily_scores)
-    streak = 0
-    for _, s in reversed(daily_scores):
-        if s >= 2:
-            streak += 1
-        else:
-            break
-
-    print()
-    print(f"  平均分: {avg:.2f}/3")
-    print(f"  连续通过: {streak} 天")
-    print(f"  总完成: {len(daily_scores)}/56 天")
-    print()
-
-    # 周检趋势
-    weekly_scores = []
-    for d in days:
-        ws = d.get("weekly_check_score")
-        if ws:
-            weekly_scores.append((d["_num"], ws))
-
+    weekly_scores = [
+        (d["_num"], d.get("weekly_check_score"))
+        for d in days
+        if d.get("weekly_check_score")
+    ]
     if weekly_scores:
-        print(f"  {C.BOLD}📊 周检分数{C.RESET}")
+        print(f"\n  {C.BOLD}周检分数{C.RESET}")
         for day_num, score in weekly_scores:
-            week_num = (day_num - 1) // 7 + 1
-            color = C.GREEN if score >= 15 else C.YELLOW if score >= 12 else C.RED
-            bar = "█" * (score) + "░" * (21 - score)
-            status = "PASS" if score >= 15 else "FAIL"
-            print(f"  W{week_num}: {color}{bar}{C.RESET} {score}/21 {status}")
-        print()
+            status = "PASS" if int(score) >= 15 else "FAIL"
+            print(f"  W{(day_num - 1) // 7 + 1}: {score}/21 {status}")
+
+    stage_scores = [
+        (d["_num"], d.get("stage_check_score"))
+        for d in days
+        if d.get("stage_check_score")
+    ]
+    if stage_scores:
+        print(f"\n  {C.BOLD}阶段检分数{C.RESET}")
+        for day_num, score in stage_scores:
+            status = "PASS" if int(score) >= 70 else "FAIL"
+            print(f"  D{day_num:02d}: {score}/100 {status}")
+    print()
 
 
-# ─── 主入口 ──────────────────────────────────────────────────────────────────
+def show_analysis(data: dict[str, Any]) -> None:
+    days = get_all_days(data)
+    print()
+    print(f"  {C.BOLD}{C.CYAN}进度分析{C.RESET}")
+    print()
+    print_tag_coverage(days)
+    print_operator_maturity(data)
+    print_gpu_library_coverage(data)
 
-def main():
+    risks: list[str] = []
+    ops = {name: (done, total) for name, done, total, _ in operator_maturity(data)}
+    libs = {name: status for name, status, _ in gpu_library_coverage(data)}
+
+    if ops.get("row_softmax", (0, 1))[0] < ops.get("row_softmax", (0, 1))[1]:
+        risks.append("row_softmax 还没有闭环；这是 attention/FlashAttention 的前置短板。")
+    if libs.get("cuda_extension") == "not_started":
+        risks.append("CUDA extension 未开始；腾讯/美团 JD 中 C++/CUDA 工程证据不足。")
+    if libs.get("cutlass") == "not_started":
+        risks.append("CUTLASS 未开始；GPU 加速库覆盖不足。")
+    if libs.get("cublas_or_pytorch_gemm") == "not_started":
+        risks.append("GEMM/cuBLAS baseline 未开始；无法支撑 GEMM 性能分析叙事。")
+
+    recent_done = [d for d in days if d.get("status") == "done"]
+    if len(recent_done) >= 2 and all(int(d.get("daily_check", 0)) < 2 for d in recent_done[-2:]):
+        risks.append("连续两天日检低于 2 分；应暂停推进并补课。")
+
+    print(f"  {C.BOLD}风险项{C.RESET}")
+    if risks:
+        for risk in risks:
+            print(f"  {C.RED}- {risk}{C.RESET}")
+    else:
+        print(f"  {C.GREEN}- 暂无高优先级风险。{C.RESET}")
+    print()
+
+    next_day = current_day(days)
+    print(f"  {C.BOLD}建议下一步{C.RESET}")
+    if next_day:
+        print(f"  Day {next_day['_num']:02d}: {next_day.get('title', '')}")
+        print(f"  先完成 tasks 中的第一项，再记录 verification。")
+    else:
+        print("  56 天计划已全部完成。")
+    print()
+
+
+def ask_bool(prompt: str, current: Any) -> bool:
+    current_label = "y" if truthy(current) else "n"
+    resp = input(f"  {prompt} [{current_label}] (y/n/回车跳过): ").strip().lower()
+    if resp == "y":
+        return True
+    if resp == "n":
+        return False
+    return bool(truthy(current))
+
+
+def interactive_update(data: dict[str, Any]) -> None:
+    days = get_all_days(data)
+    current = current_day(days)
+    if not current:
+        print(f"  {C.GREEN}所有天都已完成。{C.RESET}")
+        return
+
+    week_key = current["_week"]
+    day_key = current["_day"]
+    target = data[week_key][day_key]
+
+    print()
+    print(f"  {C.BOLD}更新 Day {current['_num']:02d}: {target.get('title', '')}{C.RESET}")
+    target["date"] = datetime.now().strftime("%Y-%m-%d")
+
+    for name, value in (target.get("tasks") or {}).items():
+        target["tasks"][name] = ask_bool(f"task:{name}", value)
+
+    for name, value in (target.get("artifacts") or {}).items():
+        target["artifacts"][name] = ask_bool(f"artifact:{name}", value)
+
+    resp = input(f"  日检分数 (0-3, 当前={target.get('daily_check', 0)}): ").strip()
+    if resp in ("0", "1", "2", "3"):
+        target["daily_check"] = int(resp)
+
+    if "weekly_check_score" in target:
+        resp = input(f"  周检分数 (0-21, 当前={target.get('weekly_check_score', 0)}): ").strip()
+        if resp:
+            target["weekly_check_score"] = int(resp)
+
+    if "stage_check_score" in target:
+        resp = input(f"  阶段检分数 (0-100, 当前={target.get('stage_check_score', 0)}): ").strip()
+        if resp:
+            target["stage_check_score"] = int(resp)
+
+    verification = input("  verification 命令/结果 (回车跳过): ").strip()
+    if verification:
+        target["verification"] = verification
+
+    weaknesses = input("  weaknesses (回车跳过): ").strip()
+    if weaknesses:
+        target["weaknesses"] = weaknesses
+
+    next_fix = input("  next_fix (回车跳过): ").strip()
+    if next_fix:
+        target["next_fix"] = next_fix
+
+    notes = input("  notes (回车跳过): ").strip()
+    if notes:
+        target["notes"] = notes
+
+    task_values = list((target.get("tasks") or {}).values())
+    artifact_values = list((target.get("artifacts") or {}).values())
+    if task_values and all(truthy(v) for v in task_values) and artifact_values and all(truthy(v) for v in artifact_values):
+        target["status"] = "done"
+    elif any(truthy(v) for v in task_values + artifact_values):
+        target["status"] = "in_progress"
+    else:
+        target["status"] = "not_started"
+
+    save_progress(data)
+    print(f"\n  {C.GREEN}已保存。{C.RESET}")
+    print()
+
+
+def main() -> None:
     data = load_progress()
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -451,6 +446,8 @@ def main():
         show_week_detail(data)
     elif cmd == "history":
         show_history(data)
+    elif cmd == "analyze":
+        show_analysis(data)
     else:
         show_dashboard(data)
 
