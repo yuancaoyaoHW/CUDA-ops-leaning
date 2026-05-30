@@ -57,20 +57,20 @@ W8 只需要组装这些素材，不需要回忆。
 
 | Day | 主题 | 产物 | JD 标签 |
 |-----|------|------|---------|
-| 1 | 仓库校准 + Nsight Compute WSL2 验证 | 算子成熟度审计表 + ncu 可用性结论 | `perf`, `docs` |
-| 2 | `row_softmax` PyTorch reference + Triton skeleton | reference + minimal implementation | `kernel` |
-| 3 | `row_softmax` correctness tests | aligned/non-aligned/dtype/mask tests | `kernel` |
-| 4 | `row_softmax` benchmark | PyTorch 对比 + GB/s | `kernel`, `perf` |
-| 5 | `row_softmax` Nsight Compute | 单 kernel profile + bottleneck note | `kernel`, `perf` |
-| 6 | softmax 闭卷复现 + note | addressing/mask/numerical stability note | `kernel`, `docs` |
-| 7 | Week 1 周检 + STAR 素材 | 手写 softmax + TopK/RAII drill + STAR metrics | `interview` |
-| 8 | RMSNorm reference + Triton 实现 | RMSNorm kernel + PyTorch reference | `kernel` |
-| 9 | fused add RMSNorm | residual add + RMSNorm fusion | `kernel` |
-| 10 | RMSNorm tests | dtype、hidden size、shape error tests | `kernel` |
-| 11 | RMSNorm benchmark | unfused PyTorch vs fused Triton | `kernel`, `perf` |
-| 12 | 最小 PyTorch C++/CUDA extension | one CUDA op demo | `kernel` |
-| 13 | CUDA extension pytest + note | build/run/verify note | `kernel`, `docs` |
-| 14 | Week 2 阶段检 + STAR 素材 | 算子闭环 mock + LRU/smart pointer drill + STAR metrics | `interview` |
+| 1 | 校准 + Nsight Compute WSL2 验证（warmup gate）| ncu 可用性结论 + 算子成熟度审计表 + 重读 Tutorial 01 | `perf`, `docs` |
+| 2 | row_softmax baseline + tests + bench（复用 row_max/row_sum 砖块）| reference + impl + tests + bench + Tutorial 02 §1 走读 | `kernel`, `perf` |
+| 3 | masked_softmax | impl + tests + bench + warp shuffle vs shared-mem 对比 + Tutorial 02 §2 走读 | `kernel`, `perf` |
+| 4 | online_softmax（→ W4 FlashAttention 铺路）| 数学推导 + 单 pass 实现 + tests + bench + ncu profile + 5 道面经题 | `kernel`, `perf` |
+| 5 | rmsnorm baseline + tests + bench | reference + impl + tests + bench + vectorized load 对比 + Tutorial 05 forward 走读 | `kernel`, `perf` |
+| 6 | layernorm + 与 RMSNorm 对比 | impl + tests + bench + ncu profile + 双对比表 + Tutorial 05 backward 走读 | `kernel`, `perf` |
+| 7 | Week 1 周检 + STAR + 家族对比表 | 闭卷 mock + reduction-norm 家族对比表 + TopK/RAII drill + STAR | `interview` |
+| 8 | fused_add_rmsnorm（fusion 主题开篇）| residual+norm fusion + tests + bench + ncu + 与 unfused 对比 + vLLM 走读 | `kernel`, `perf` |
+| 9 | swiglu + gelu（激活 fusion + Libdevice）| 双 gate + SiLU fusion + tests + bench + Tutorial 07 Libdevice 走读 | `kernel`, `perf` |
+| 10 | rope（→ W4 attention 铺路）| RoPE 实现 + tests + bench + sin/cos cache 策略 + vLLM pos_encoding 走读 | `kernel`, `perf` |
+| 11 | 最小 PyTorch C++/CUDA extension（rmsnorm 重写）| extension build + setup.py/JIT 对比 + WSL2 build path note | `kernel`, `docs` |
+| 12 | rmsnorm_cuda_ext 测试 + 与 Triton 版 benchmark | pytest + bench + dtype dispatch + smart pointer/RAII drill | `kernel`, `perf` |
+| 13 | kv_cache_append toy（→ W5 PagedAttention 铺路）| contiguous KV append + tests + bench + paged 设计 doc + 5 道面经题 | `kernel`, `serving` |
+| 14 | Week 2 阶段检 + STAR + 全景表 | 闭卷 mock + reduction+norm+fusion+extension 全景表 + LRU/smart pointer drill + STAR | `interview` |
 | 15 | GEMM baseline | PyTorch/cuBLAS matmul benchmark harness | `kernel`, `perf` |
 | 16 | GEMM shape sweep | M/N/K + dtype TFLOPS 表 | `kernel`, `perf` |
 | 17 | CUTLASS profiler 入门 | profiler run 或受限说明 + note | `kernel`, `perf` |
@@ -130,6 +130,7 @@ W8 只需要组装这些素材，不需要回忆。
 12. **W5 加入线上推理排障指标**——把 TTFT/TPOT/ITL/P99/KV usage/prefix hit 纳入项目叙事
 13. **W6 加入 Mooncake/RBG/external KV 和 LongCat/fusion/N-gram**——对齐小红书、美团公开技术栈
 14. **W8 加入模型基础兜底**——Transformer、RoPE/GQA/MQA、LoRA/QLoRA、SFT/RLHF/DPO/RAG
+15. **W1/W2 重构为 reduction-normalization-fusion 主题块（2026-05-31）**——算子从 1.5 个扩到 11 个，每天三槽（main/depth/output），对标 Triton Tutorials 02/05/07，hook Day 4 online_softmax → W4、Day 10 rope → W4、Day 13 kv_cache_append → W5。详见 `docs/superpowers/specs/2026-05-31-week1-week2-redesign-design.md`。
 
 ## 每日记录模板
 
