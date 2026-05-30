@@ -8,3 +8,5 @@ cutlass/
 .agents/
 .codex/
 .worktrees/
+
+study-plan/*.bak

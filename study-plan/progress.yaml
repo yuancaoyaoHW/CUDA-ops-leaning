@@ -1,9 +1,9 @@
 meta:
   title: 大模型推理框架/加速 8 周计划
   primary_roles:
-    - 腾讯混元-大模型推理加速工程师
-    - 小红书-大模型推理框架研发
-    - 美团-大模型推理
+  - 腾讯混元-大模型推理加速工程师
+  - 小红书-大模型推理框架研发
+  - 美团-大模型推理
   focus_weights:
     kernel: 45
     framework: 30
@@ -19,14 +19,29 @@ meta:
     docs: 源码走读、系统图、README、技术文档
     interview: mock、系统设计、项目 STAR、岗位问答
   milestones:
-    - day: 14
-      text: 2 个推理相关算子有 tests + benchmark；至少 1 个有 profile
-    - day: 28
-      text: 能讲清 softmax/RMSNorm/GEMM/attention 的性能瓶颈；有 attention toy
-    - day: 42
-      text: 能讲清 vLLM/SGLang scheduler、Mooncake/RBG/external KV、LongCat/MoE/fusion、PD/EPD 分离
-    - day: 56
-      text: README、benchmark 图、系统设计稿、腾讯/小红书/美团定制问答、coding drill、模型基础兜底齐全
+  - day: 14
+    text: 2 个推理相关算子有 tests + benchmark；至少 1 个有 profile
+  - day: 28
+    text: 能讲清 softmax/RMSNorm/GEMM/attention 的性能瓶颈；有 attention toy
+  - day: 42
+    text: 能讲清 vLLM/SGLang scheduler、Mooncake/RBG/external KV、LongCat/MoE/fusion、PD/EPD
+      分离
+  - day: 56
+    text: README、benchmark 图、系统设计稿、腾讯/小红书/美团定制问答、coding drill、模型基础兜底齐全
+  verify_defaults:
+    note_min_lines: 30
+    note_required_sections:
+    - bottleneck
+    - next_experiment
+    bench_required_keys_default:
+    - gbps
+    bench_required_keys_gemm:
+    - tflops
+    profile_extensions:
+    - .ncu-rep
+    - .nsys-rep
+    profile_min_size_bytes: 1024
+    pytest_timeout_seconds: 60
 operators:
   vector_add:
     status: benchmark_stage
@@ -38,6 +53,7 @@ operators:
       profile: true
       note: true
     notes: 已有 Triton 实现、测试、benchmark、nsys 记录和学习笔记。
+    kind: elementwise
   axpy:
     status: benchmark_stage
     artifacts:
@@ -48,6 +64,7 @@ operators:
       profile: false
       note: partial
     notes: 已有实现、测试、benchmark；笔记需要整理为标准 operator note。
+    kind: elementwise
   row_sum:
     status: complete
     artifacts:
@@ -58,6 +75,7 @@ operators:
       profile: true
       note: true
     notes: 已有 ncu profile，结论为 memory-bound。
+    kind: reduction
   row_max:
     status: profile_stage
     artifacts:
@@ -68,6 +86,7 @@ operators:
       profile: true
       note: partial
     notes: masked values 使用 -inf；note 需要补齐 benchmark 数据。
+    kind: reduction
   row_softmax:
     status: not_started
     artifacts:
@@ -77,6 +96,7 @@ operators:
       benchmark: false
       profile: false
       note: false
+    kind: reduction
   rmsnorm:
     status: not_started
     artifacts:
@@ -86,6 +106,7 @@ operators:
       benchmark: false
       profile: false
       note: false
+    kind: reduction
   flash_attention_toy:
     status: not_started
     artifacts:
@@ -95,6 +116,7 @@ operators:
       benchmark: false
       profile: false
       note: false
+    kind: attention
   int4_dequant:
     status: not_started
     artifacts:
@@ -104,14 +126,15 @@ operators:
       benchmark: false
       profile: false
       note: false
+    kind: quant
 gpu_libraries:
   triton:
     status: in_progress
     evidence:
-      - vector_add
-      - axpy
-      - row_sum
-      - row_max
+    - vector_add
+    - axpy
+    - row_sum
+    - row_max
   cuda_extension:
     status: not_started
     evidence: []
@@ -124,24 +147,48 @@ gpu_libraries:
   nsight_systems:
     status: in_progress
     evidence:
-      - reports/nsys/bench_vector_add_20260517_094034.nsys-rep
-      - reports/nsys/bench_row_sum_20260517_194054.nsys-rep
+    - reports/nsys/bench_vector_add_20260517_094034.nsys-rep
+    - reports/nsys/bench_row_sum_20260517_194054.nsys-rep
   nsight_compute:
     status: in_progress
     evidence:
-      - reports/ncu/row_sum_one_kernel.ncu-rep
-      - reports/ncu/row_max_one_kernel.ncu-rep
+    - reports/ncu/row_sum_one_kernel.ncu-rep
+    - reports/ncu/row_max_one_kernel.ncu-rep
   tensorrt_llm_concepts:
     status: not_started
     evidence: []
-
+week0:
+  day00:
+    title: Warmup 算子收尾（Day 1 gate）
+    operators:
+    - vector_add
+    - axpy
+    - row_sum
+    - row_max
+    phase: review
+    date: ''
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      finish_axpy_note: false
+      finish_row_max_note: false
+    artifacts: {}
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
 week1:
   day01:
     title: 仓库校准 + Nsight Compute WSL2 验证
     date: '2026-06-01'
     status: not_started
     daily_check: 0
-    jd_tags: [perf, docs]
+    jd_tags:
+    - perf
+    - docs
     tasks:
       audit_existing_kernels: false
       map_operator_maturity: false
@@ -152,12 +199,14 @@ week1:
     weaknesses: GPU 加速库、算子能力薄弱；当前进度记录和真实产物不同步。
     next_fix: 先确认 ncu 是否能采集硬件计数器，再进入 row_softmax 闭环。
     notes: ''
+    phase: review
   day02:
     title: row_softmax PyTorch reference + Triton skeleton
     date: '2026-06-02'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       write_reference: false
       write_triton_skeleton: false
@@ -170,12 +219,15 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: row_softmax
+    phase: reference
   day03:
     title: row_softmax correctness tests
     date: '2026-06-03'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       aligned_tests: false
       non_aligned_tests: false
@@ -186,12 +238,16 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: row_softmax
+    phase: tests
   day04:
     title: row_softmax benchmark
     date: '2026-06-04'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       write_benchmark: false
       compare_torch: false
@@ -202,12 +258,16 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: row_softmax
+    phase: benchmark
   day05:
     title: row_softmax Nsight Compute
     date: '2026-06-05'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       isolate_one_kernel: false
       run_ncu: false
@@ -219,12 +279,16 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: row_softmax
+    phase: profile
   day06:
     title: softmax 闭卷复现 + note
     date: '2026-06-06'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, docs]
+    jd_tags:
+    - kernel
+    - docs
     tasks:
       closed_book_kernel: false
       explain_masking: false
@@ -235,13 +299,16 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: row_softmax
+    phase: note
   day07:
     title: Week 1 周检 + STAR
     date: '2026-06-07'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       handwrite_softmax: false
       oral_mock: false
@@ -254,14 +321,18 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week2:
   day08:
     title: RMSNorm reference + Triton 实现
     date: '2026-06-08'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       write_reference: false
       implement_rmsnorm: false
@@ -274,12 +345,15 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: rmsnorm
+    phase: reference
   day09:
     title: fused add RMSNorm
     date: '2026-06-09'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       implement_fusion: false
       compare_unfused: false
@@ -291,12 +365,15 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: rmsnorm
+    phase: implementation
   day10:
     title: RMSNorm tests
     date: '2026-06-10'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       dtype_tests: false
       hidden_size_tests: false
@@ -307,12 +384,16 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: rmsnorm
+    phase: tests
   day11:
     title: RMSNorm benchmark
     date: '2026-06-11'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       write_benchmark: false
       compare_unfused: false
@@ -323,12 +404,15 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: rmsnorm
+    phase: benchmark
   day12:
     title: 最小 PyTorch C++/CUDA extension
     date: '2026-06-12'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       inspect_existing_script: false
       run_or_update_extension_demo: false
@@ -340,12 +424,15 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: implementation
   day13:
     title: CUDA extension pytest + note
     date: '2026-06-13'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, docs]
+    jd_tags:
+    - kernel
+    - docs
     tasks:
       add_or_run_test: false
       record_failure_modes: false
@@ -357,6 +444,7 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: tests
   day14:
     title: Week 2 阶段检 + STAR
     date: '2026-06-14'
@@ -364,7 +452,8 @@ week2:
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       operator_mock: false
       cuda_extension_mock: false
@@ -377,14 +466,19 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week3:
   day15:
     title: GEMM baseline
     date: '2026-06-15'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       build_gemm_benchmark: false
       run_pytorch_baseline: false
@@ -396,12 +490,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: benchmark
   day16:
     title: GEMM shape sweep
     date: '2026-06-16'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       sweep_mnk: false
       sweep_dtype: false
@@ -413,12 +510,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: benchmark
   day17:
     title: CUTLASS profiler 入门
     date: '2026-06-17'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       locate_cutlass_tools: false
       run_or_document_profiler: false
@@ -430,12 +530,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: profile
   day18:
     title: GEMM roofline
     date: '2026-06-18'
     status: not_started
     daily_check: 0
-    jd_tags: [perf, docs]
+    jd_tags:
+    - perf
+    - docs
     tasks:
       compute_arithmetic_intensity: false
       create_roofline_table: false
@@ -447,12 +550,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day19:
     title: epilogue/fusion 概念
     date: '2026-06-19'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, docs]
+    jd_tags:
+    - kernel
+    - docs
     tasks:
       study_epilogue: false
       map_bias_activation_fusion: false
@@ -463,12 +569,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day20:
     title: GEMM 面试复盘
     date: '2026-06-20'
     status: not_started
     daily_check: 0
-    jd_tags: [interview, docs]
+    jd_tags:
+    - interview
+    - docs
     tasks:
       compare_cublas_cutlass_triton: false
       oral_mock: false
@@ -480,13 +589,15 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day21:
     title: Week 3 周检 + buffer + STAR
     date: '2026-06-21'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       gemm_mock: false
       cutlass_mock: false
@@ -500,14 +611,19 @@ week3:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week4:
   day22:
     title: Attention 数学与 PyTorch SDPA
     date: '2026-06-22'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, docs]
+    jd_tags:
+    - kernel
+    - docs
     tasks:
       write_sdpa_reference: false
       choose_shapes: false
@@ -519,12 +635,16 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: reference
   day23:
     title: online softmax 推导
     date: '2026-06-23'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, docs]
+    jd_tags:
+    - kernel
+    - docs
     tasks:
       derive_online_update: false
       closed_book_derivation: false
@@ -535,12 +655,15 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: reference
   day24:
     title: FlashAttention forward toy skeleton
     date: '2026-06-24'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       implement_block_loop: false
       implement_online_softmax_state: false
@@ -552,12 +675,15 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: implementation
   day25:
     title: FlashAttention correctness
     date: '2026-06-25'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel]
+    jd_tags:
+    - kernel
     tasks:
       small_shape_tests: false
       mask_tests: false
@@ -569,12 +695,16 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: tests
   day26:
     title: FlashAttention benchmark
     date: '2026-06-26'
     status: not_started
     daily_check: 0
-    jd_tags: [kernel, perf]
+    jd_tags:
+    - kernel
+    - perf
     tasks:
       benchmark_sdpa: false
       compare_shapes: false
@@ -586,12 +716,16 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: benchmark
   day27:
     title: decode attention / prefill vs decode
     date: '2026-06-27'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, perf]
+    jd_tags:
+    - serving
+    - perf
     tasks:
       compare_prefill_decode: false
       map_decode_bottleneck: false
@@ -603,6 +737,8 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: flash_attention_toy
+    phase: note
   day28:
     title: Week 4 阶段检 + buffer + STAR
     date: '2026-06-28'
@@ -610,7 +746,8 @@ week4:
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       attention_kernel_mock: false
       performance_mock: false
@@ -623,14 +760,18 @@ week4:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week5:
   day29:
     title: KV cache layout
     date: '2026-06-29'
     status: not_started
     daily_check: 0
-    jd_tags: [serving]
+    jd_tags:
+    - serving
     tasks:
       implement_contiguous_kv_toy: false
       compute_memory_footprint: false
@@ -642,12 +783,14 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: implementation
   day30:
     title: paged KV block table
     date: '2026-06-30'
     status: not_started
     daily_check: 0
-    jd_tags: [serving]
+    jd_tags:
+    - serving
     tasks:
       implement_block_table: false
       test_mapping: false
@@ -660,12 +803,15 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: implementation
   day31:
     title: PagedAttention 数据流
     date: '2026-07-01'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, docs]
+    jd_tags:
+    - serving
+    - docs
     tasks:
       draw_access_flow: false
       explain_fragmentation: false
@@ -676,12 +822,14 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day32:
     title: continuous batching toy scheduler
     date: '2026-07-02'
     status: not_started
     daily_check: 0
-    jd_tags: [serving]
+    jd_tags:
+    - serving
     tasks:
       model_prefill_queue: false
       model_decode_queue: false
@@ -693,12 +841,15 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: implementation
   day33:
     title: chunked prefill + KV cache 压缩 + 排障指标
     date: '2026-07-03'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, perf]
+    jd_tags:
+    - serving
+    - perf
     tasks:
       define_ttft_tpot_itl: false
       run_workload_simulation: false
@@ -711,12 +862,15 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day34:
     title: Speculative Decoding + N-gram cache
     date: '2026-07-04'
     status: not_started
     daily_check: 0
-    jd_tags: [perf, serving]
+    jd_tags:
+    - perf
+    - serving
     tasks:
       draft_verify_toy: false
       acceptance_rate_analysis: false
@@ -729,13 +883,15 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: implementation
   day35:
     title: Week 5 周检 + STAR
     date: '2026-07-05'
     status: not_started
     daily_check: 0
     weekly_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       kv_cache_mock: false
       paged_attention_mock: false
@@ -749,14 +905,19 @@ week5:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week6:
   day36:
     title: vLLM architecture
     date: '2026-07-06'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, docs]
+    jd_tags:
+    - framework
+    - docs
     tasks:
       draw_engine_flow: false
       identify_scheduler_entry: false
@@ -767,12 +928,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day37:
     title: vLLM scheduler 深挖
     date: '2026-07-07'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, serving]
+    jd_tags:
+    - framework
+    - serving
     tasks:
       trace_schedule_step: false
       document_preemption: false
@@ -783,12 +947,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day38:
     title: vLLM KV/block manager
     date: '2026-07-08'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, serving]
+    jd_tags:
+    - framework
+    - serving
     tasks:
       trace_block_lifecycle: false
       map_allocation_failure: false
@@ -799,12 +966,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day39:
     title: SGLang architecture
     date: '2026-07-09'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, docs]
+    jd_tags:
+    - framework
+    - docs
     tasks:
       draw_sglang_flow: false
       compare_vllm: false
@@ -815,12 +985,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day40:
     title: RadixAttention + Mooncake/RBG/external KVCache
     date: '2026-07-10'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, serving]
+    jd_tags:
+    - framework
+    - serving
     tasks:
       study_radix_attention: false
       map_mooncake_external_kv: false
@@ -831,12 +1004,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day41:
     title: TensorRT-LLM + Meituan LongCat MoE/fusion
     date: '2026-07-11'
     status: not_started
     daily_check: 0
-    jd_tags: [framework, docs]
+    jd_tags:
+    - framework
+    - docs
     tasks:
       study_inflight_batching: false
       study_moe_topk_fusion: false
@@ -847,12 +1023,15 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: note
   day42:
     title: 分布式推理基础 + KV Router/dynamic PD
     date: '2026-07-12'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, framework]
+    jd_tags:
+    - serving
+    - framework
     tasks:
       tp_pp_pd_comm_model: false
       kv_router_dynamic_pd: false
@@ -863,7 +1042,10 @@ week6:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: note
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week7:
   day43:
     title: Week 6 阶段检 + STAR
@@ -872,7 +1054,8 @@ week7:
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       framework_model_fundamentals_mock: false
       mooncake_rbg_mock: false
@@ -884,12 +1067,15 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day44:
     title: INT4 weight-only quant 基础
     date: '2026-07-14'
     status: not_started
     daily_check: 0
-    jd_tags: [quant, docs]
+    jd_tags:
+    - quant
+    - docs
     tasks:
       derive_quant_math: false
       explain_scale_zero_point: false
@@ -900,12 +1086,16 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: int4_dequant
+    phase: reference
   day45:
     title: INT4 pack/dequant Triton
     date: '2026-07-15'
     status: not_started
     daily_check: 0
-    jd_tags: [quant, kernel]
+    jd_tags:
+    - quant
+    - kernel
     tasks:
       implement_pack: false
       implement_dequant: false
@@ -917,12 +1107,16 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: int4_dequant
+    phase: implementation
   day46:
     title: INT4 dequant benchmark
     date: '2026-07-16'
     status: not_started
     daily_check: 0
-    jd_tags: [quant, perf]
+    jd_tags:
+    - quant
+    - perf
     tasks:
       benchmark_dequant: false
       compute_gbs: false
@@ -934,12 +1128,16 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: int4_dequant
+    phase: benchmark
   day47:
     title: weight-only GEMV
     date: '2026-07-17'
     status: not_started
     daily_check: 0
-    jd_tags: [quant, kernel]
+    jd_tags:
+    - quant
+    - kernel
     tasks:
       design_gemv_toy: false
       implement_or_document: false
@@ -951,12 +1149,16 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: int4_dequant
+    phase: implementation
   day48:
     title: GPTQ vs AWQ vs FP8
     date: '2026-07-18'
     status: not_started
     daily_check: 0
-    jd_tags: [quant, docs]
+    jd_tags:
+    - quant
+    - docs
     tasks:
       compare_gptq_awq: false
       summarize_fp8: false
@@ -967,6 +1169,8 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    operator: int4_dequant
+    phase: note
   day49:
     title: Week 7 阶段检 + buffer + STAR
     date: '2026-07-19'
@@ -974,7 +1178,8 @@ week7:
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       quant_mock: false
       quant_bitops_drill: false
@@ -987,14 +1192,19 @@ week7:
     weaknesses: ''
     next_fix: ''
     notes: ''
-
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
 week8:
   day50:
     title: 项目 README + benchmark 图表
     date: '2026-07-20'
     status: not_started
     daily_check: 0
-    jd_tags: [perf, docs]
+    jd_tags:
+    - perf
+    - docs
     tasks:
       collect_metrics: false
       draw_charts: false
@@ -1007,12 +1217,14 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day51:
     title: 腾讯 JD 定制准备
     date: '2026-07-21'
     status: not_started
     daily_check: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       map_tencent_requirements: false
       cuda_cutlass_tensorrt_answers: false
@@ -1025,12 +1237,14 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day52:
     title: 小红书 JD 定制准备
     date: '2026-07-22'
     status: not_started
     daily_check: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       map_xhs_requirements: false
       mooncake_rbg_answers: false
@@ -1043,12 +1257,14 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day53:
     title: 美团 JD 定制准备
     date: '2026-07-23'
     status: not_started
     daily_check: 0
-    jd_tags: [interview]
+    jd_tags:
+    - interview
     tasks:
       map_meituan_requirements: false
       longcat_moe_fusion_answers: false
@@ -1061,12 +1277,15 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day54:
     title: LLM serving 系统设计
     date: '2026-07-24'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, interview]
+    jd_tags:
+    - serving
+    - interview
     tasks:
       design_1000_qps_serving: false
       discuss_ttft_tpot_p99: false
@@ -1078,12 +1297,15 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day55:
     title: 分布式推理设计深化
     date: '2026-07-25'
     status: not_started
     daily_check: 0
-    jd_tags: [serving, interview]
+    jd_tags:
+    - serving
+    - interview
     tasks:
       design_tp_pp_pd: false
       design_kv_routing: false
@@ -1096,6 +1318,7 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
   day56:
     title: 最终 mock + 投递准备
     date: '2026-07-26'
@@ -1103,7 +1326,9 @@ week8:
     daily_check: 0
     weekly_check_score: 0
     stage_check_score: 0
-    jd_tags: [interview, docs]
+    jd_tags:
+    - interview
+    - docs
     tasks:
       run_final_mock: false
       coding_drill: false
@@ -1117,3 +1342,7 @@ week8:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    phase: review
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
