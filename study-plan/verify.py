@@ -486,15 +486,87 @@ def print_day_status(result: VerifyResult, day_num: int) -> None:
         print(f"  {op_name}: {score}/6 [{res.status}]")
 
 
-# ---- Task 10 stubs ----------------------------------------------------------
+# ---- STAR / drill parsers ----------------------------------------------------
+
+WEEK_HEADING_RE = re.compile(r"^## Week (\d+)\b", re.MULTILINE)
+SUB_HEADING_RE = re.compile(r"^### (Algo|Cpp|Situation|Task|Action|Result|Badcase)\b", re.MULTILINE)
+PLACEHOLDER_RE = re.compile(r"\(\s*待填\s*\)")
+STAR_REQUIRED_SUBSECTIONS = ("Situation", "Task", "Action", "Result", "Badcase")
+
+
+def _extract_week_section(md_text: str, week: int) -> str | None:
+    matches = list(WEEK_HEADING_RE.finditer(md_text))
+    for i, m in enumerate(matches):
+        if int(m.group(1)) != week:
+            continue
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(md_text)
+        return md_text[start:end]
+    return None
+
+
+def _significant_lines(text: str) -> list[str]:
+    out = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if PLACEHOLDER_RE.search(s) and len(s) <= 15:
+            continue
+        out.append(s)
+    return out
+
+
+def check_star_filled(path: Path, week: int, *, strict: bool) -> bool:
+    if not path.exists():
+        return False
+    section = _extract_week_section(path.read_text(encoding="utf-8"), week)
+    if section is None:
+        return False
+    sig = _significant_lines(section)
+    if len(sig) < 5:
+        return False
+    if strict:
+        for sub in STAR_REQUIRED_SUBSECTIONS:
+            if not re.search(rf"^### {sub}\b", section, re.MULTILINE):
+                return False
+    return True
+
+
+def check_drill_done(path: Path, week: int, *, kind: str) -> bool:
+    """kind in {'algo', 'cpp'}."""
+    if not path.exists():
+        return False
+    section = _extract_week_section(path.read_text(encoding="utf-8"), week)
+    if section is None:
+        return False
+    sub_label = "Algo" if kind == "algo" else "Cpp"
+    sub_re = re.compile(rf"^### {sub_label}\b.*?(?=^### |\Z)", re.MULTILINE | re.DOTALL)
+    sub_match = sub_re.search(section)
+    if not sub_match:
+        return False
+    sub_text = sub_match.group(0)
+    sig = _significant_lines(sub_text)
+    return len(sig) >= 3
 
 
 def collect_drill_summary(data: dict[str, Any], *, repo_root: Path) -> dict:
-    """Stub: will be implemented in Task 10."""
-    return {"_stub": True}
+    """Return {week: {star: bool, algo: bool, cpp: bool}}."""
+    star_path = repo_root / "notes" / "star-weekly.md"
+    drill_path = repo_root / "notes" / "algorithm-drill.md"
+    out = {}
+    for w in range(1, 9):
+        out[w] = {
+            "star": check_star_filled(star_path, w, strict=False),
+            "algo": check_drill_done(drill_path, w, kind="algo"),
+            "cpp": check_drill_done(drill_path, w, kind="cpp"),
+        }
+    return out
 
 
 def print_drill_summary(summary: dict) -> None:
-    """Stub: will be implemented in Task 10."""
-    if summary.get("_stub"):
-        print("drill summary not implemented yet (Task 10)")
+    print("Week | STAR | Algo | Cpp")
+    print("-----|------|------|----")
+    for w, row in summary.items():
+        marks = lambda b: "  ✓" if b else "  ✗"
+        print(f"  {w}  | {marks(row['star'])} | {marks(row['algo'])} | {marks(row['cpp'])}")
