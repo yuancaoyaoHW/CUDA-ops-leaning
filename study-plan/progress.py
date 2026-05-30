@@ -49,10 +49,12 @@ class C:
 
 
 def load_progress() -> dict[str, Any]:
-    if not PROGRESS_FILE.exists():
+    candidate = Path("study-plan/progress.yaml")
+    path = candidate if candidate.exists() else PROGRESS_FILE
+    if not path.exists():
         print(f"{C.RED}找不到 progress.yaml{C.RESET}")
         sys.exit(1)
-    with open(PROGRESS_FILE, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -318,6 +320,23 @@ def show_history(data: dict[str, Any]) -> None:
 
 
 def show_analysis(data: dict[str, Any]) -> None:
+    # Refresh artifact/status fields from verify engine before rendering
+    try:
+        import verify
+        repo_root = Path(__file__).resolve().parents[1]
+        results = verify.verify(
+            data=data,
+            yaml_path=None,
+            repo_root=repo_root,
+            target=("all",),
+            strict=False,
+            write=False,
+            skip_tests=True,
+        )
+        verify.apply_results_in_memory(data, results)
+    except Exception as exc:
+        print(f"{C.YELLOW}verify 失败，使用 yaml 静态字段: {exc}{C.RESET}")
+
     days = get_all_days(data)
     print()
     print(f"  {C.BOLD}{C.CYAN}进度分析{C.RESET}")
@@ -436,21 +455,111 @@ def interactive_update(data: dict[str, Any]) -> None:
     print()
 
 
-def main() -> None:
-    data = load_progress()
-    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-
-    if cmd == "update":
-        interactive_update(data)
-    elif cmd == "week":
-        show_week_detail(data)
-    elif cmd == "history":
-        show_history(data)
-    elif cmd == "analyze":
-        show_analysis(data)
+def cmd_verify(args, data):
+    import verify
+    if args.operator:
+        target = ("operator", args.operator)
+    elif args.day is not None:
+        target = ("day", args.day)
     else:
-        show_dashboard(data)
+        target = ("all",)
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        results = verify.verify(
+            data=data,
+            yaml_path=PROGRESS_FILE if args.write else None,
+            repo_root=repo_root,
+            target=target,
+            strict=args.strict,
+            write=args.write,
+            skip_tests=args.skip_tests,
+        )
+    except verify.UnknownTargetError as exc:
+        print(f"{C.RED}{exc}{C.RESET}", file=sys.stderr)
+        return 2
+    except verify.MissingDependencyError as exc:
+        print(f"{C.RED}{exc}{C.RESET}", file=sys.stderr)
+        return 4
+    except verify.BackupError as exc:
+        print(f"{C.RED}{exc}{C.RESET}", file=sys.stderr)
+        return 3
+    verify.print_summary(results, strict=args.strict)
+    return 0
+
+
+def cmd_status(args, data):
+    import verify
+    if args.day is None:
+        print(f"{C.RED}--day N is required{C.RESET}", file=sys.stderr)
+        return 2
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        result = verify.verify_day(data, args.day, repo_root=repo_root)
+    except verify.UnknownTargetError as exc:
+        print(f"{C.RED}{exc}{C.RESET}", file=sys.stderr)
+        return 2
+    verify.print_day_status(result, args.day)
+    print(f"day{args.day:02d}")
+    return 0
+
+
+def cmd_drill(args, data):
+    import verify
+    repo_root = Path(__file__).resolve().parents[1]
+    summary = verify.collect_drill_summary(data, repo_root=repo_root)
+    verify.print_drill_summary(summary)
+    return 0
+
+
+def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="progress")
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_verify = sub.add_parser("verify", help="Run verify engine")
+    target_group = p_verify.add_mutually_exclusive_group()
+    target_group.add_argument("--day", type=int)
+    target_group.add_argument("--operator", type=str)
+    target_group.add_argument("--all", action="store_true")
+    p_verify.add_argument("--strict", action="store_true")
+    p_verify.add_argument("--write", action="store_true")
+    p_verify.add_argument("--skip-tests", action="store_true")
+
+    p_status = sub.add_parser("status", help="Show single-day artifact status")
+    p_status.add_argument("--day", type=int)
+
+    sub.add_parser("drill", help="Show STAR/algo/cpp drill summary")
+    sub.add_parser("week", help="Show current week detail")
+    sub.add_parser("history", help="Show recent history")
+    sub.add_parser("analyze", help="Show coverage analysis")
+    sub.add_parser("update", help="Interactive update (legacy)")
+
+    args = parser.parse_args()
+    data = load_progress()
+
+    if args.cmd == "verify":
+        return cmd_verify(args, data)
+    if args.cmd == "status":
+        return cmd_status(args, data)
+    if args.cmd == "drill":
+        return cmd_drill(args, data)
+    if args.cmd == "week":
+        show_week_detail(data)
+        return 0
+    if args.cmd == "history":
+        show_history(data)
+        return 0
+    if args.cmd == "analyze":
+        show_analysis(data)
+        return 0
+    if args.cmd == "update":
+        interactive_update(data)
+        return 0
+
+    show_dashboard(data)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

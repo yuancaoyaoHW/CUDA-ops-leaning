@@ -16,6 +16,24 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+# ---- exceptions -------------------------------------------------------------
+
+
+class UnknownTargetError(Exception):
+    """Raised when a --day or --operator target doesn't exist in the data."""
+    pass
+
+
+class MissingDependencyError(Exception):
+    """Raised when a required external dependency is unreachable."""
+    pass
+
+
+class BackupError(Exception):
+    """Raised when the .bak write fails."""
+    pass
+
+
 # ---- data classes ----------------------------------------------------------
 
 
@@ -293,27 +311,33 @@ def _save_yaml(path: Path, data: dict[str, Any]) -> None:
 
 
 def _backup(yaml_path: Path) -> None:
-    bak = yaml_path.with_suffix(yaml_path.suffix + ".bak")
-    if not bak.exists():
-        bak.write_bytes(yaml_path.read_bytes())
+    try:
+        bak = yaml_path.with_suffix(yaml_path.suffix + ".bak")
+        if not bak.exists():
+            bak.write_bytes(yaml_path.read_bytes())
+    except OSError as exc:
+        raise BackupError(f"backup failed: {exc}") from exc
 
 
 def _resolve_targets(target: tuple, data: dict[str, Any]) -> list[str]:
     if target[0] == "all":
         return sorted((data.get("operators") or {}).keys())
     if target[0] == "operator":
-        return [target[1]]
+        op = target[1]
+        if op not in (data.get("operators") or {}):
+            raise UnknownTargetError(f"unknown operator: {op}")
+        return [op]
     if target[0] == "day":
         # day target maps to its operator(s)
         week_key, day_key = _find_day(data, target[1])
         if week_key is None:
-            return []
+            raise UnknownTargetError(f"unknown day: {target[1]}")
         day = data[week_key][day_key] or {}
         if "operators" in day:
             return list(day["operators"])
         if "operator" in day:
             return [day["operator"]]
-        return []
+        return []  # review-only day, valid but no operators
     raise ValueError(f"unknown target: {target}")
 
 
@@ -329,7 +353,8 @@ def _find_day(data: dict[str, Any], day_num: int) -> tuple[Optional[str], Option
 
 def verify(
     *,
-    yaml_path: Path,
+    yaml_path: Path | None = None,
+    data: dict[str, Any] | None = None,
     repo_root: Path,
     target: tuple,
     strict: bool,
@@ -340,8 +365,17 @@ def verify(
 
     Resolves targets, runs check_* for each operator, derives status,
     and optionally writes back artifacts + status to the YAML file.
+
+    Either yaml_path or data must be provided. If write=True, yaml_path
+    is required (to know where to write back).
     """
-    data = _load_yaml(yaml_path)
+    if data is None:
+        if yaml_path is None:
+            raise ValueError("either yaml_path or data must be provided")
+        data = _load_yaml(yaml_path)
+    if write and yaml_path is None:
+        raise ValueError("yaml_path required when write=True")
+
     meta = data.get("meta") or {}
     operators = data.get("operators") or {}
     op_names = _resolve_targets(target, data)
@@ -374,3 +408,89 @@ def verify(
         _save_yaml(yaml_path, data)
 
     return result
+
+
+# ---- helpers for CLI wrappers ------------------------------------------------
+
+
+def apply_results_in_memory(data: dict[str, Any], results: VerifyResult) -> None:
+    """Write verify results into in-memory dict (no disk)."""
+    operators = data.setdefault("operators", {})
+    for op_name, res in results.operators.items():
+        if op_name in operators and operators[op_name] is not None:
+            operators[op_name]["artifacts"] = res.artifacts
+            operators[op_name]["status"] = res.status
+
+
+def write_back(data: dict[str, Any], results: VerifyResult, yaml_path: Path) -> None:
+    """Apply results to data and write to disk with backup."""
+    try:
+        _backup(yaml_path)
+    except BackupError:
+        raise
+    except OSError as exc:
+        raise BackupError(f"backup failed: {exc}") from exc
+    apply_results_in_memory(data, results)
+    _save_yaml(yaml_path, data)
+
+
+def verify_day(
+    data: dict[str, Any],
+    day_num: int,
+    *,
+    repo_root: Path,
+    strict: bool = False,
+    skip_tests: bool = True,
+) -> VerifyResult:
+    """Convenience wrapper: verify a single day's operators."""
+    return verify(
+        data=data,
+        repo_root=repo_root,
+        target=("day", day_num),
+        strict=strict,
+        write=False,
+        skip_tests=skip_tests,
+    )
+
+
+def print_summary(results: VerifyResult, *, strict: bool) -> None:
+    """Print one-line-per-operator summary to stdout."""
+    label = "strict" if strict else "non-strict"
+    print(f"verify ({label}):")
+    short = {"reference": "ref", "implementation": "impl", "tests": "tests",
+             "benchmark": "bench", "profile": "profile", "note": "note"}
+    for op_name in sorted(results.operators):
+        res = results.operators[op_name]
+        score = sum(1 for v in res.artifacts.values() if v)
+        marks = " ".join(
+            f"{'✓' if res.artifacts.get(k) else '✗'} {short[k]}"
+            for k in ARTIFACT_ORDER
+        )
+        print(f"  {op_name:<22} {score}/6  {marks}   [{res.status}]")
+
+
+def print_day_status(result: VerifyResult, day_num: int) -> None:
+    """Print a single day's operator status."""
+    day_key = f"day{day_num:02d}"
+    if not result.operators:
+        print(f"{day_key}: review-only day (no operators)")
+        return
+    print(f"{day_key}:")
+    for op_name in sorted(result.operators):
+        res = result.operators[op_name]
+        score = sum(1 for v in res.artifacts.values() if v)
+        print(f"  {op_name}: {score}/6 [{res.status}]")
+
+
+# ---- Task 10 stubs ----------------------------------------------------------
+
+
+def collect_drill_summary(data: dict[str, Any], *, repo_root: Path) -> dict:
+    """Stub: will be implemented in Task 10."""
+    return {"_stub": True}
+
+
+def print_drill_summary(summary: dict) -> None:
+    """Stub: will be implemented in Task 10."""
+    if summary.get("_stub"):
+        print("drill summary not implemented yet (Task 10)")
