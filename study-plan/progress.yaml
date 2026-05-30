@@ -127,102 +127,6 @@ operators:
       profile: false
       note: false
     kind: quant
-  masked_softmax:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: reduction
-  online_softmax:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: reduction
-  layernorm:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: reduction
-  fused_add_rmsnorm:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: reduction
-  swiglu:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: elementwise
-  gelu:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: elementwise
-  rope:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: elementwise
-  rmsnorm_cuda_ext:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: reduction
-    paths:
-      impl: kernels/cuda/rmsnorm_cuda_ext/rmsnorm_cuda_ext.cu
-      tests: tests/test_rmsnorm_cuda_ext.py
-      bench: benchmarks/bench_rmsnorm_cuda_ext.py
-      bench_json: reports/json/rmsnorm_cuda_ext_bench.json
-      note: notes/rmsnorm_cuda_ext.md
-  kv_cache_append:
-    status: not_started
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
-    kind: elementwise
 gpu_libraries:
   triton:
     status: in_progress
@@ -278,7 +182,7 @@ week0:
     notes: ''
 week1:
   day01:
-    title: 校准 + Nsight Compute WSL2 验证（warmup gate）
+    title: 仓库校准 + Nsight Compute WSL2 验证
     date: '2026-06-01'
     status: not_started
     daily_check: 0
@@ -287,77 +191,57 @@ week1:
     - docs
     tasks:
       audit_existing_kernels: false
+      map_operator_maturity: false
       validate_ncu_wsl2: false
-      reread_tutorial_01: false
     artifacts:
       docs: false
     verification: ''
     weaknesses: GPU 加速库、算子能力薄弱；当前进度记录和真实产物不同步。
-    next_fix: 先确认 ncu 能采集硬件计数器，再进入 reduction-normalization 主题块。
+    next_fix: 先确认 ncu 是否能采集硬件计数器，再进入 row_softmax 闭环。
     notes: ''
     phase: review
-    slots:
-      main: '校准仓库 + Nsight Compute WSL2 验证（重跑已有 row_max/row_sum 一次以校准）'
-      depth: '跑通 row_max/row_sum 的 ncu，确认 memory-bound 结论可复现'
-      output: '重读 Triton Tutorial 01（vector add）作为风格基线 + 算子成熟度审计表'
   day02:
-    title: row_softmax baseline + tests + bench（reduction 主题开篇）
+    title: row_softmax PyTorch reference + Triton skeleton
     date: '2026-06-02'
     status: not_started
     daily_check: 0
     jd_tags:
     - kernel
-    - perf
     tasks:
       write_reference: false
-      implement_softmax: false
-      add_tests: false
-      add_benchmark: false
+      write_triton_skeleton: false
+      record_addressing: false
     artifacts:
       reference: false
       implementation: false
-      tests: false
-      benchmark: false
+      note: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
     operator: row_softmax
-    phase: benchmark
-    slots:
-      main: 'row_softmax baseline + tests（复用 row_max/row_sum 的 reduction 砖块）+ bench'
-      depth: 'tile size sweep（BLOCK_SIZE 256/512/1024/2048）→ 出 GB/s 表'
-      output: 'Triton Tutorial 02 §1（naive vs fused）+ PyTorch SoftMax.cu 走读'
+    phase: reference
   day03:
-    title: masked_softmax（attention mask 应用 + reduction 风格对比）
+    title: row_softmax correctness tests
     date: '2026-06-03'
     status: not_started
     daily_check: 0
     jd_tags:
     - kernel
-    - perf
     tasks:
-      implement_masked_softmax: false
-      add_tests: false
-      add_benchmark: false
-      reduction_strategy_compare: false
+      aligned_tests: false
+      non_aligned_tests: false
+      dtype_and_mask_tests: false
     artifacts:
-      reference: false
-      implementation: false
       tests: false
-      benchmark: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
-    operator: masked_softmax
-    phase: benchmark
-    slots:
-      main: 'masked_softmax 实现 + tests（causal mask + padding mask）+ bench'
-      depth: 'warp shuffle vs shared-mem reduction 两种实现路径对比 GB/s'
-      output: 'Triton Tutorial 02 §2（autotune + heuristics）+ vLLM softmax 走读'
+    operator: row_softmax
+    phase: tests
   day04:
-    title: online_softmax（→ W4 FlashAttention 铺路）
+    title: row_softmax benchmark
     date: '2026-06-04'
     status: not_started
     daily_check: 0
@@ -365,30 +249,19 @@ week1:
     - kernel
     - perf
     tasks:
-      derive_online_softmax_math: false
-      implement_online_softmax: false
-      add_tests: false
-      add_benchmark: false
-      add_profile_note: false
+      write_benchmark: false
+      compare_torch: false
+      compute_gbs: false
     artifacts:
-      reference: false
-      implementation: false
-      tests: false
       benchmark: false
-      profile: false
-      note: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
-    operator: online_softmax
-    phase: profile
-    slots:
-      main: 'online softmax 数学推导 + 单 pass 实现 + tests + bench + ncu profile'
-      depth: 'numerical stability：fp16 overflow / bf16 accumulate 对比 + max-rescale 误差分析'
-      output: 'Triton Tutorial 02 ncu 段 + 5 道面经题（数值稳定 / launch-bound 判别 / occupancy）'
+    operator: row_softmax
+    phase: benchmark
   day05:
-    title: rmsnorm baseline + tests + bench（normalization 主题开篇）
+    title: row_softmax Nsight Compute
     date: '2026-06-05'
     status: not_started
     daily_check: 0
@@ -396,58 +269,40 @@ week1:
     - kernel
     - perf
     tasks:
-      write_reference: false
-      implement_rmsnorm: false
-      add_tests: false
-      add_benchmark: false
+      isolate_one_kernel: false
+      run_ncu: false
+      write_bottleneck_note: false
     artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: rmsnorm
-    phase: benchmark
-    slots:
-      main: 'rmsnorm reference + Triton 实现 + tests + bench'
-      depth: 'vectorized load（tl.load 4xfp16 pack）vs naive load 对比 GB/s'
-      output: 'Triton Tutorial 05 forward 段（Welford 均值/方差）走读笔记'
-  day06:
-    title: layernorm + 与 RMSNorm 对比（normalization 收口）
-    date: '2026-06-06'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    - perf
-    tasks:
-      implement_layernorm: false
-      add_tests: false
-      add_benchmark: false
-      add_profile_note: false
-      compare_rmsnorm: false
-    artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
       profile: false
       note: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
-    operator: layernorm
+    operator: row_softmax
     phase: profile
-    slots:
-      main: 'layernorm 实现 + tests + bench + ncu profile'
-      depth: '双 ncu profile（rmsnorm vs layernorm）→ bottleneck 与 compute/memory ratio 对比表'
-      output: 'Triton Tutorial 05 backward 段（locked atomic add）阅读笔记 + vLLM layernorm.cu 走读'
+  day06:
+    title: softmax 闭卷复现 + note
+    date: '2026-06-06'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - docs
+    tasks:
+      closed_book_kernel: false
+      explain_masking: false
+      finalize_note: false
+    artifacts:
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: row_softmax
+    phase: note
   day07:
-    title: Week 1 周检 + STAR + reduction-norm 家族对比表
+    title: Week 1 周检 + STAR
     date: '2026-06-07'
     status: not_started
     daily_check: 0
@@ -455,8 +310,8 @@ week1:
     jd_tags:
     - interview
     tasks:
-      handwrite_softmax_oral: false
-      family_compare_table: false
+      handwrite_softmax: false
+      oral_mock: false
       topk_heap_drill: false
       cpp_raii_move_review: false
       star_metrics_entry: false
@@ -470,22 +325,107 @@ week1:
     star_filled: false
     algo_drill_done: false
     cpp_drill_done: false
-    slots:
-      main: '口头闭卷 mock：softmax / online softmax / rmsnorm / layernorm 推导'
-      depth: 'reduction-normalization 家族对比表（GB/s / arithmetic intensity / bottleneck）'
-      output: 'TopK / RAII drill + STAR 段（baseline/metric/improvement/failure/badcase）'
 week2:
   day08:
-    title: RMSNorm reference + Triton 实现
+    title: fused_add_rmsnorm（fusion 主题开篇 + W4 attention 前置）
     date: '2026-06-08'
     status: not_started
     daily_check: 0
     jd_tags:
     - kernel
+    - perf
     tasks:
-      write_reference: false
-      implement_rmsnorm: false
-      record_formula: false
+      implement_fusion: false
+      add_tests: false
+      add_benchmark: false
+      add_profile_note: false
+      compare_unfused: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: fused_add_rmsnorm
+    phase: profile
+    slots:
+      main: 'residual + rmsnorm fusion 实现 + tests + bench + ncu profile'
+      depth: 'fusion 前后 ncu 对比 + launch overhead 量化（kernel 数 / launch 时间）'
+      output: 'vLLM fused_add_rms_norm 走读笔记'
+  day09:
+    title: swiglu + gelu（激活 fusion + Libdevice 落地）
+    date: '2026-06-09'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      implement_swiglu: false
+      implement_gelu: false
+      add_tests: false
+      add_benchmark: false
+      libdevice_intrinsics: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: swiglu
+    phase: benchmark
+    slots:
+      main: 'swiglu（双 gate matmul + SiLU fusion）+ gelu 实现 + tests + bench'
+      depth: 'fusion tradeoff（kernel launch / cache reuse / register pressure）面经题 5 道'
+      output: 'Triton Tutorial 07 Libdevice 完整阅读（tanh/erf/rsqrt/silu）+ vLLM activation 走读'
+  day10:
+    title: rope（→ W4 attention 铺路）
+    date: '2026-06-10'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - perf
+    tasks:
+      implement_rope: false
+      add_tests: false
+      add_benchmark: false
+      sin_cos_cache_strategy: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: rope
+    phase: benchmark
+    slots:
+      main: 'RoPE Triton 实现（in-place + 半精度 query/key）+ tests + bench'
+      depth: 'in-place vs out-of-place、fp32 sin/cos cache vs 在线计算 对比'
+      output: 'vLLM pos_encoding.cu 走读笔记'
+  day11:
+    title: 最小 PyTorch C++/CUDA extension（rmsnorm 重写一版）
+    date: '2026-06-11'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - docs
+    tasks:
+      build_cuda_extension: false
+      torch_check_validation: false
+      document_build_path: false
     artifacts:
       reference: false
       implementation: false
@@ -494,108 +434,70 @@ week2:
     weaknesses: ''
     next_fix: ''
     notes: ''
-    operator: rmsnorm
-    phase: reference
-  day09:
-    title: fused add RMSNorm
-    date: '2026-06-09'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    tasks:
-      implement_fusion: false
-      compare_unfused: false
-      record_memory_traffic: false
-    artifacts:
-      implementation: false
-      note: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: rmsnorm
+    operator: rmsnorm_cuda_ext
     phase: implementation
-  day10:
-    title: RMSNorm tests
-    date: '2026-06-10'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    tasks:
-      dtype_tests: false
-      hidden_size_tests: false
-      error_tests: false
-    artifacts:
-      tests: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: rmsnorm
-    phase: tests
-  day11:
-    title: RMSNorm benchmark
-    date: '2026-06-11'
+    slots:
+      main: '最小 CUDA extension：用 C++/CUDA 重写 rmsnorm（setup.py / TORCH_CHECK / dispatch）'
+      depth: 'setup.py vs JIT load 对比 + WSL2 CUDA 12.6 build 路径排查'
+      output: 'extension build/run/verify note（含 build 失败时的降级策略）'
+  day12:
+    title: rmsnorm_cuda_ext 测试 + 与 Triton 版 benchmark
+    date: '2026-06-12'
     status: not_started
     daily_check: 0
     jd_tags:
     - kernel
     - perf
     tasks:
-      write_benchmark: false
-      compare_unfused: false
-      compute_gbs: false
-    artifacts:
-      benchmark: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    operator: rmsnorm
-    phase: benchmark
-  day12:
-    title: 最小 PyTorch C++/CUDA extension
-    date: '2026-06-12'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    tasks:
-      inspect_existing_script: false
-      run_or_update_extension_demo: false
-      document_build_path: false
-    artifacts:
-      implementation: false
-      docs: false
-    verification: ''
-    weaknesses: ''
-    next_fix: ''
-    notes: ''
-    phase: implementation
-  day13:
-    title: CUDA extension pytest + note
-    date: '2026-06-13'
-    status: not_started
-    daily_check: 0
-    jd_tags:
-    - kernel
-    - docs
-    tasks:
-      add_or_run_test: false
-      record_failure_modes: false
-      write_cuda_extension_note: false
+      add_pytest: false
+      add_benchmark: false
+      compare_triton_version: false
+      add_dtype_dispatch: false
     artifacts:
       tests: false
+      benchmark: false
       note: false
     verification: ''
     weaknesses: ''
     next_fix: ''
     notes: ''
-    phase: tests
+    operator: rmsnorm_cuda_ext
+    phase: benchmark
+    slots:
+      main: 'extension pytest + benchmark vs Triton 版 rmsnorm（dtype dispatch fp16/bf16/fp32）'
+      depth: 'C++ template / dtype dispatch / atomic 写法对比'
+      output: 'C++ drill：smart pointer / RAII 复习题 5 道'
+  day13:
+    title: kv_cache_append toy（→ W5 PagedAttention 铺路）
+    date: '2026-06-13'
+    status: not_started
+    daily_check: 0
+    jd_tags:
+    - kernel
+    - serving
+    tasks:
+      implement_contiguous_append: false
+      add_tests: false
+      add_benchmark: false
+      paged_layout_design_note: false
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      note: false
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+    operator: kv_cache_append
+    phase: benchmark
+    slots:
+      main: 'kv_cache_append toy（contiguous KV layout）+ tests + bench'
+      depth: 'contiguous vs paged 写入差异分析（设计 doc，paged 实际实现留 W5）'
+      output: '可选 Triton Tutorial 04 Dropout（PRNG/seeded mask）+ 5 道面经题（CUDA extension / fusion / KV layout）'
   day14:
-    title: Week 2 阶段检 + STAR
+    title: Week 2 阶段检 + STAR + 全景表
     date: '2026-06-14'
     status: not_started
     daily_check: 0
@@ -609,6 +511,7 @@ week2:
       lru_or_queue_drill: false
       cpp_smart_pointer_review: false
       star_metrics_entry: false
+      panorama_table: false
     artifacts:
       mock: false
     verification: ''
@@ -619,6 +522,10 @@ week2:
     star_filled: false
     algo_drill_done: false
     cpp_drill_done: false
+    slots:
+      main: '口头闭卷 mock：fused_add_rmsnorm / swiglu / rope / cuda extension build 流程'
+      depth: 'reduction + norm + fusion + extension 全景表（11 个算子的 GB/s / kind / bottleneck / hook）'
+      output: 'LRU + smart pointer drill + STAR 段（baseline/metric/improvement/failure/badcase）'
 week3:
   day15:
     title: GEMM baseline
