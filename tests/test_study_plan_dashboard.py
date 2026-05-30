@@ -79,17 +79,19 @@ def test_update_day_writes_extended_progress_fields(tmp_path, monkeypatch) -> No
     assert ok is True
     saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
     day = saved["week1"]["day01"]
-    assert day["status"] == "done"
+    # status and artifacts are verify-owned, so they stay unchanged
+    assert day["status"] == "not_started"
     assert day["daily_check"] == 3
     assert day["tasks"] == {"audit": True, "plan": True}
-    assert day["artifacts"] == {"docs": True}
+    assert day["artifacts"] == {"docs": False}
     assert day["verification"] == "python study-plan/progress.py analyze"
     assert day["weaknesses"] == "none"
     assert day["next_fix"] == "continue"
     assert day["notes"] == "updated"
 
 
-def test_update_day_derives_status_from_checklists(tmp_path, monkeypatch) -> None:
+def test_update_day_no_longer_derives_status(tmp_path, monkeypatch) -> None:
+    """Status derivation is now owned by verify, not update_day."""
     dashboard = load_dashboard_module()
     progress_file = tmp_path / "progress.yaml"
     write_sample_progress(progress_file)
@@ -98,17 +100,17 @@ def test_update_day_derives_status_from_checklists(tmp_path, monkeypatch) -> Non
     assert dashboard.update_day(
         1,
         {
-            "status": "done",
             "tasks": {"audit": True},
-            "artifacts": {"docs": False},
         },
     )
 
     saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
-    assert saved["week1"]["day01"]["status"] == "in_progress"
+    # status remains not_started — web cannot change it
+    assert saved["week1"]["day01"]["status"] == "not_started"
 
 
-def test_update_day_preserves_blocked_status(tmp_path, monkeypatch) -> None:
+def test_update_day_status_not_writable(tmp_path, monkeypatch) -> None:
+    """Even 'blocked' status cannot be set via update_day (verify-owned)."""
     dashboard = load_dashboard_module()
     progress_file = tmp_path / "progress.yaml"
     write_sample_progress(progress_file)
@@ -119,12 +121,12 @@ def test_update_day_preserves_blocked_status(tmp_path, monkeypatch) -> None:
         {
             "status": "blocked",
             "tasks": {"audit": False, "plan": False},
-            "artifacts": {"docs": False},
         },
     )
 
     saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
-    assert saved["week1"]["day01"]["status"] == "blocked"
+    # status is verify-owned, stays at not_started
+    assert saved["week1"]["day01"]["status"] == "not_started"
 
 
 def test_update_operator_and_gpu_library_write_yaml(tmp_path, monkeypatch) -> None:
@@ -151,12 +153,14 @@ def test_update_operator_and_gpu_library_write_yaml(tmp_path, monkeypatch) -> No
 
     saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
     op = saved["operators"]["row_softmax"]
-    assert op["status"] == "benchmark_stage"
-    assert op["artifacts"]["reference"] is True
-    assert op["artifacts"]["implementation"] is True
-    assert op["artifacts"]["tests"] is True
+    # status and artifacts are verify-owned, only notes is writable
+    assert op["status"] == "not_started"
+    assert op["artifacts"]["reference"] is False
+    assert op["artifacts"]["implementation"] is False
+    assert op["artifacts"]["tests"] is False
     assert op["artifacts"]["benchmark"] is False
     assert op["notes"] == "correctness complete"
+    # gpu_library is NOT locked by this task
     assert saved["gpu_libraries"]["cutlass"] == {
         "status": "in_progress",
         "evidence": ["reports/cutlass/gemm.md"],
@@ -237,3 +241,51 @@ def test_dashboard_build_uses_verify_truth(tmp_path, monkeypatch):
     html_text = out.read_text(encoding="utf-8")
     # The dashboard embeds artifacts as JSON; after _apply_verify, reference becomes true.
     assert '"reference": true' in html_text
+
+
+def test_update_day_rejects_artifact_fields(tmp_path, monkeypatch):
+    """artifact / status / star_filled fields must be rejected (silently dropped) by update_day."""
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    write_sample_progress(progress_file)
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+
+    payload = {
+        "daily_check": 2,                    # allowed
+        "weaknesses": "test",                # allowed
+        "artifacts": {"docs": True},         # rejected
+        "status": "complete",                # rejected
+        "star_filled": True,                 # rejected
+    }
+
+    ok = dashboard.update_day(1, payload)
+    assert ok is True
+
+    saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
+    day = saved["week1"]["day01"]
+    assert day["daily_check"] == 2
+    assert day["weaknesses"] == "test"
+    # These fields must NOT be writable from the web side
+    assert day["status"] == "not_started"
+    assert day["artifacts"] == {"docs": False}
+
+
+def test_update_operator_artifact_rejected(tmp_path, monkeypatch):
+    """operator status/artifacts must be rejected; only notes is writable."""
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    write_sample_progress(progress_file)
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+
+    if not hasattr(dashboard, "update_operator"):
+        return
+    ok = dashboard.update_operator(
+        "row_softmax",
+        {"status": "complete", "artifacts": {"reference": True}, "notes": "ok"},
+    )
+    assert ok is True
+    saved = yaml.safe_load(progress_file.read_text(encoding="utf-8"))
+    op = saved["operators"]["row_softmax"]
+    assert op["notes"] == "ok"
+    assert op["status"] == "not_started"
+    assert op["artifacts"]["reference"] is False

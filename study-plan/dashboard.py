@@ -39,6 +39,27 @@ OPERATOR_STATUS_OPTIONS = [
 LIBRARY_STATUS_OPTIONS = ["not_started", "in_progress", "complete", "blocked"]
 TEXT_DAY_FIELDS = ["status", "date", "verification", "weaknesses", "next_fix", "notes"]
 INT_DAY_FIELDS = ["daily_check", "weekly_check_score", "stage_check_score"]
+
+# --- Web-writable field whitelists (§5: only user-note fields from web) ---
+USER_NOTE_FIELDS_DAY = {
+    "daily_check",
+    "date",
+    "verification",
+    "weaknesses",
+    "next_fix",
+    "notes",
+    "tasks",
+    "weekly_check_score",
+    "stage_check_score",
+}
+USER_NOTE_FIELDS_OPERATOR = {"notes"}
+
+
+def _filter_user_fields(payload: dict, allowed: set) -> dict:
+    """Drop any payload keys not in the allowed whitelist."""
+    return {k: v for k, v in payload.items() if k in allowed}
+
+
 SAFE_ORIGINS = {"http://127.0.0.1", "http://localhost"}
 
 
@@ -266,6 +287,9 @@ def update_day(day_num: int, updates: dict[str, Any]) -> bool:
     if week_key not in raw or day_key not in raw[week_key]:
         return False
 
+    # Filter to user-note fields only; artifact/status/star fields are dropped.
+    updates = _filter_user_fields(updates, USER_NOTE_FIELDS_DAY)
+
     day_data = raw[week_key][day_key]
     for field in TEXT_DAY_FIELDS:
         if field in updates:
@@ -274,17 +298,13 @@ def update_day(day_num: int, updates: dict[str, Any]) -> bool:
         if field in updates and updates[field] not in ("", None):
             day_data[field] = int(updates[field])
 
-    for group_name in ("tasks", "artifacts"):
-        if group_name not in updates:
-            continue
-        group = day_data.get(group_name) or {}
-        for key, value in updates[group_name].items():
+    # Only tasks are web-writable as a group-bool dict; artifacts are verify-owned.
+    if "tasks" in updates:
+        group = day_data.get("tasks") or {}
+        for key, value in updates["tasks"].items():
             if key in group:
                 group[key] = bool(value)
-        day_data[group_name] = group
-
-    if updates.get("auto_status", True):
-        day_data["status"] = derive_day_status(day_data)
+        day_data["tasks"] = group
 
     save_progress(raw)
     return True
@@ -296,20 +316,12 @@ def update_operator(name: str, updates: dict[str, Any]) -> bool:
     if name not in operators:
         return False
 
+    # Filter to user-note fields only; status/artifacts are verify-owned.
+    updates = _filter_user_fields(updates, USER_NOTE_FIELDS_OPERATOR)
+
     operator = operators[name]
-    if "status" in updates:
-        status = str(updates["status"])
-        if status not in OPERATOR_STATUS_OPTIONS:
-            raise ValueError(f"unknown operator status: {status}")
-        operator["status"] = status
     if "notes" in updates:
         operator["notes"] = str(updates["notes"])
-    if "artifacts" in updates:
-        artifacts = operator.get("artifacts") or {}
-        for key, value in updates["artifacts"].items():
-            if key in artifacts:
-                artifacts[key] = bool(value)
-        operator["artifacts"] = artifacts
 
     save_progress(raw)
     return True
