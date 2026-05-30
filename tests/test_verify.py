@@ -346,3 +346,143 @@ def test_check_tests_skip_tests_flag(tmp_path):
     # skip_tests=True means strict also fails
     assert verify.check_tests("x", op, paths, th, strict=True, repo_root=tmp_path,
                               skip_tests=True) is False
+
+
+# ---- Task 4: verify() top-level + derive_status + yaml writeback -----------
+
+import shutil
+
+
+def _copy_fixture_yaml(tmp_path):
+    src = FIXTURE_ROOT / "mini_progress.yaml"
+    dst = tmp_path / "progress.yaml"
+    shutil.copy(src, dst)
+    return dst
+
+
+def test_verify_single_operator_no_write(tmp_path):
+    verify = load_verify_module()
+    yaml_path = _copy_fixture_yaml(tmp_path)
+    # 不准备任何 artifact 文件 → 全 False
+    result = verify.verify(
+        yaml_path=yaml_path,
+        repo_root=tmp_path,
+        target=("operator", "row_softmax"),
+        strict=False,
+        write=False,
+    )
+    assert result.operators["row_softmax"].artifacts == {
+        "reference": False, "implementation": False, "tests": False,
+        "benchmark": False, "profile": False, "note": False,
+    }
+    # yaml 没动
+    import yaml as _y
+    raw = _y.safe_load(open(yaml_path))
+    assert raw["operators"]["row_softmax"]["status"] == "not_started"
+
+
+def test_verify_writes_back_artifacts_and_status(tmp_path):
+    verify = load_verify_module()
+    yaml_path = _copy_fixture_yaml(tmp_path)
+    # 准备 row_softmax impl + tests + bench json
+    (tmp_path / "kernels" / "triton" / "row_softmax").mkdir(parents=True)
+    (tmp_path / "kernels" / "triton" / "row_softmax" / "row_softmax.py").write_text(
+        "import torch\nimport triton\n"
+    )
+    (tmp_path / "tests").mkdir(exist_ok=True)
+    (tmp_path / "tests" / "test_row_softmax.py").write_text(
+        "def test_ok(): assert True\n"
+    )
+    (tmp_path / "reports" / "json").mkdir(parents=True)
+    (tmp_path / "reports" / "json" / "row_softmax_bench.json").write_text(
+        '{"gbps": 400}'
+    )
+    result = verify.verify(
+        yaml_path=yaml_path,
+        repo_root=tmp_path,
+        target=("operator", "row_softmax"),
+        strict=False,
+        write=True,
+    )
+    assert result.operators["row_softmax"].artifacts["implementation"] is True
+    assert result.operators["row_softmax"].artifacts["benchmark"] is True
+    # 回写 yaml
+    import yaml as _y
+    raw = _y.safe_load(open(yaml_path))
+    assert raw["operators"]["row_softmax"]["artifacts"]["implementation"] is True
+    assert raw["operators"]["row_softmax"]["artifacts"]["benchmark"] is True
+    # status 派生
+    assert raw["operators"]["row_softmax"]["status"] in (
+        "tests_stage", "benchmark_stage", "impl_stage", "in_progress"
+    )
+
+
+def test_verify_does_not_touch_user_note_fields(tmp_path):
+    verify = load_verify_module()
+    yaml_path = _copy_fixture_yaml(tmp_path)
+    # 写一些用户笔记
+    import yaml as _y
+    data = _y.safe_load(open(yaml_path))
+    data["week1"]["day01"]["weaknesses"] = "kept"
+    data["week1"]["day01"]["next_fix"] = "kept-fix"
+    data["week1"]["day01"]["daily_check"] = 2
+    open(yaml_path, "w").write(_y.safe_dump(data, allow_unicode=True, sort_keys=False))
+
+    verify.verify(
+        yaml_path=yaml_path,
+        repo_root=tmp_path,
+        target=("operator", "row_softmax"),
+        strict=False,
+        write=True,
+    )
+    raw = _y.safe_load(open(yaml_path))
+    assert raw["week1"]["day01"]["weaknesses"] == "kept"
+    assert raw["week1"]["day01"]["next_fix"] == "kept-fix"
+    assert raw["week1"]["day01"]["daily_check"] == 2
+
+
+def test_verify_creates_backup(tmp_path):
+    verify = load_verify_module()
+    yaml_path = _copy_fixture_yaml(tmp_path)
+    verify.verify(
+        yaml_path=yaml_path,
+        repo_root=tmp_path,
+        target=("operator", "row_softmax"),
+        strict=False,
+        write=True,
+    )
+    assert (tmp_path / "progress.yaml.bak").exists()
+
+
+def test_verify_target_all_iterates_all_operators(tmp_path):
+    verify = load_verify_module()
+    yaml_path = _copy_fixture_yaml(tmp_path)
+    result = verify.verify(
+        yaml_path=yaml_path,
+        repo_root=tmp_path,
+        target=("all",),
+        strict=False,
+        write=False,
+    )
+    assert set(result.operators.keys()) == {"row_softmax", "axpy"}
+
+
+def test_derive_status_complete(tmp_path):
+    verify = load_verify_module()
+    arts = {k: True for k in
+            ["reference", "implementation", "tests", "benchmark", "profile", "note"]}
+    assert verify.derive_status(arts) == "complete"
+
+
+def test_derive_status_benchmark_stage(tmp_path):
+    verify = load_verify_module()
+    arts = {"reference": True, "implementation": True, "tests": True,
+            "benchmark": True, "profile": False, "note": False}
+    assert verify.derive_status(arts) == "benchmark_stage"
+
+
+def test_derive_status_not_started(tmp_path):
+    verify = load_verify_module()
+    arts = {k: False for k in
+            ["reference", "implementation", "tests", "benchmark", "profile", "note"]}
+    assert verify.derive_status(arts) == "not_started"

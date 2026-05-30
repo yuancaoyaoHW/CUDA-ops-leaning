@@ -241,3 +241,136 @@ def check_note(paths: Paths, thresholds: Thresholds, *, strict: bool) -> bool:
         if needle not in lower:
             return False
     return True
+
+
+# ---- top-level verify ------------------------------------------------------
+
+
+@dataclass
+class OpResult:
+    artifacts: dict[str, bool]
+    status: str
+
+
+@dataclass
+class VerifyResult:
+    operators: dict[str, OpResult] = field(default_factory=dict)
+
+
+ARTIFACT_ORDER = ["reference", "implementation", "tests", "benchmark", "profile", "note"]
+
+
+def derive_status(artifacts: dict[str, bool]) -> str:
+    """Derive operator status from artifact booleans (spec section 3)."""
+    score = sum(1 for k in ARTIFACT_ORDER if artifacts.get(k))
+    if score == 6:
+        return "complete"
+    if score == 5 and not artifacts["note"]:
+        return "profile_stage"
+    if score == 5 and not artifacts["profile"]:
+        return "note_stage"
+    if artifacts.get("benchmark"):
+        return "benchmark_stage"
+    if artifacts.get("tests"):
+        return "tests_stage"
+    if artifacts.get("implementation"):
+        return "impl_stage"
+    if score == 0:
+        return "not_started"
+    return "in_progress"
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    import yaml
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _save_yaml(path: Path, data: dict[str, Any]) -> None:
+    import yaml
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+
+
+def _backup(yaml_path: Path) -> None:
+    bak = yaml_path.with_suffix(yaml_path.suffix + ".bak")
+    if not bak.exists():
+        bak.write_bytes(yaml_path.read_bytes())
+
+
+def _resolve_targets(target: tuple, data: dict[str, Any]) -> list[str]:
+    if target[0] == "all":
+        return sorted((data.get("operators") or {}).keys())
+    if target[0] == "operator":
+        return [target[1]]
+    if target[0] == "day":
+        # day target maps to its operator(s)
+        week_key, day_key = _find_day(data, target[1])
+        if week_key is None:
+            return []
+        day = data[week_key][day_key] or {}
+        if "operators" in day:
+            return list(day["operators"])
+        if "operator" in day:
+            return [day["operator"]]
+        return []
+    raise ValueError(f"unknown target: {target}")
+
+
+def _find_day(data: dict[str, Any], day_num: int) -> tuple[Optional[str], Optional[str]]:
+    """Return (week_key, day_key) for given day number, e.g. 1 -> ('week1', 'day01')."""
+    day_key = f"day{day_num:02d}"
+    for w in range(0, 9):
+        wk = f"week{w}"
+        if wk in data and day_key in (data.get(wk) or {}):
+            return wk, day_key
+    return None, None
+
+
+def verify(
+    *,
+    yaml_path: Path,
+    repo_root: Path,
+    target: tuple,
+    strict: bool,
+    write: bool,
+    skip_tests: bool = False,
+) -> VerifyResult:
+    """Top-level verify orchestrator.
+
+    Resolves targets, runs check_* for each operator, derives status,
+    and optionally writes back artifacts + status to the YAML file.
+    """
+    data = _load_yaml(yaml_path)
+    meta = data.get("meta") or {}
+    operators = data.get("operators") or {}
+    op_names = _resolve_targets(target, data)
+
+    result = VerifyResult()
+    for op_name in op_names:
+        op = operators.get(op_name)
+        if op is None:
+            continue
+        paths = resolve_paths(op_name, op, repo_root)
+        thresholds = resolve_thresholds(op, meta)
+        artifacts = {
+            "reference": check_reference(op, paths, strict=strict),
+            "implementation": check_implementation(paths, strict=strict),
+            "tests": check_tests(op_name, op, paths, thresholds,
+                                 strict=strict, repo_root=repo_root,
+                                 skip_tests=skip_tests),
+            "benchmark": check_benchmark(paths, thresholds, strict=strict),
+            "profile": check_profile(paths, thresholds, strict=strict),
+            "note": check_note(paths, thresholds, strict=strict),
+        }
+        status = derive_status(artifacts)
+        result.operators[op_name] = OpResult(artifacts=artifacts, status=status)
+
+    if write and op_names:
+        _backup(yaml_path)
+        for op_name, res in result.operators.items():
+            data["operators"][op_name]["artifacts"] = res.artifacts
+            data["operators"][op_name]["status"] = res.status
+        _save_yaml(yaml_path, data)
+
+    return result
