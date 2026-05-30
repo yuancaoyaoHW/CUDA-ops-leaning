@@ -23,6 +23,7 @@ except ImportError:
 BASE_DIR = Path(__file__).parent
 PROGRESS_FILE = BASE_DIR / "progress.yaml"
 OUTPUT_HTML = BASE_DIR / "dashboard.html"
+OUTPUT_FILE = OUTPUT_HTML  # alias for test compatibility
 CSS_FILE = BASE_DIR / "dashboard.css"
 JS_FILE = BASE_DIR / "dashboard.js"
 TAG_ORDER = ["kernel", "framework", "serving", "perf", "quant", "docs", "interview"]
@@ -110,6 +111,33 @@ def enrich_day(day: dict[str, Any]) -> dict[str, Any]:
     enriched["artifact_total"] = artifact_total
     enriched["completion_pct"] = pct(task_done + artifact_done, task_total + artifact_total)
     return enriched
+
+
+def _apply_verify(data: dict[str, Any]) -> dict[str, Any]:
+    """Refresh operator artifacts via verify before rendering. Best-effort."""
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+
+        _sys.path.insert(0, str(_Path(__file__).parent))
+        import verify
+
+        repo_root = _Path.cwd()
+        results = verify.verify(
+            data=data,
+            target=("all", None),
+            strict=False,
+            write=False,
+            skip_tests=True,
+            repo_root=repo_root,
+        )
+        verify.apply_results_in_memory(data, results)
+    except Exception as exc:
+        print(
+            f"[dashboard] verify failed, falling back to yaml static: {exc}",
+            file=__import__("sys").stderr,
+        )
+    return data
 
 
 def tag_coverage(days: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
@@ -205,6 +233,7 @@ def risks(data: dict[str, Any]) -> list[str]:
 
 def get_api_data() -> dict[str, Any]:
     raw = load_progress()
+    raw = _apply_verify(raw)
     days = [enrich_day(day) for day in get_all_days(raw)]
     weeks = []
     for week_num in range(1, 9):
@@ -441,10 +470,20 @@ def render_dashboard(embed_data: bool = True) -> str:
 """
 
 
+def _get_output_path() -> Path:
+    """Return the output path, respecting monkeypatch overrides."""
+    # When tests monkeypatch OUTPUT_FILE on the module object, globals() reflects it.
+    return globals().get("OUTPUT_FILE") or OUTPUT_HTML
+
+
 def build() -> None:
     html_text = render_dashboard(embed_data=True)
-    OUTPUT_HTML.write_text(html_text, encoding="utf-8")
-    print(f"Generated {OUTPUT_HTML}")
+    out_path = _get_output_path()
+    out_path.write_text(html_text, encoding="utf-8")
+    print(f"Generated {out_path}")
+
+
+build_static_dashboard = build  # alias for test compatibility
 
 
 def serve(port: int = 8765) -> None:

@@ -194,3 +194,46 @@ def test_render_dashboard_uses_external_assets_and_accessible_dialog(tmp_path, m
     assert 'role="dialog"' in html
     assert 'aria-modal="true"' in html
     assert 'id="initial-data"' not in html
+
+
+def test_dashboard_build_includes_operator_and_phase(tmp_path, monkeypatch):
+    """--build should render operator/phase fields into HTML (through embedded JSON)."""
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    fixture = Path(__file__).resolve().parent / "fixtures" / "study_plan" / "mini_progress.yaml"
+    progress_file.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+
+    out = tmp_path / "dashboard_out.html"
+    monkeypatch.setattr(dashboard, "OUTPUT_FILE", out)
+    monkeypatch.setattr(dashboard, "OUTPUT_HTML", out)
+
+    dashboard.build_static_dashboard()
+    html_text = out.read_text(encoding="utf-8")
+    assert "row_softmax" in html_text
+    assert "reference" in html_text  # phase name appears in JSON via day.phase
+
+
+def test_dashboard_build_uses_verify_truth(tmp_path, monkeypatch):
+    """Fixture has row_softmax artifacts all false; after creating a real impl file,
+    build should render reference=true (embedded JSON)."""
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    fixture = Path(__file__).resolve().parent / "fixtures" / "study_plan" / "mini_progress.yaml"
+    progress_file.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+
+    (tmp_path / "kernels" / "triton" / "row_softmax").mkdir(parents=True)
+    (tmp_path / "kernels" / "triton" / "row_softmax" / "row_softmax.py").write_text(
+        "import torch\n\ndef pytorch_reference(x): return torch.softmax(x, -1)\n"
+    )
+    monkeypatch.chdir(tmp_path)
+
+    out = tmp_path / "dashboard_out.html"
+    monkeypatch.setattr(dashboard, "OUTPUT_FILE", out)
+    monkeypatch.setattr(dashboard, "OUTPUT_HTML", out)
+
+    dashboard.build_static_dashboard()
+    html_text = out.read_text(encoding="utf-8")
+    # The dashboard embeds artifacts as JSON; after _apply_verify, reference becomes true.
+    assert '"reference": true' in html_text
