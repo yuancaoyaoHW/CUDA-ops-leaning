@@ -40,10 +40,19 @@ LIBRARY_STATUS_OPTIONS = ["not_started", "in_progress", "complete", "blocked"]
 TEXT_DAY_FIELDS = ["status", "date", "verification", "weaknesses", "next_fix", "notes"]
 INT_DAY_FIELDS = ["daily_check", "weekly_check_score", "stage_check_score"]
 SAFE_ORIGINS = {"http://127.0.0.1", "http://localhost"}
+GUIDES_DIR = BASE_DIR / "guides"
 
 
 def load_progress() -> dict[str, Any]:
     with open(PROGRESS_FILE, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def load_guide(day_num: int) -> dict[str, Any] | None:
+    guide_file = GUIDES_DIR / f"day{day_num:02d}.yaml"
+    if not guide_file.exists():
+        return None
+    with open(guide_file, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -110,6 +119,9 @@ def enrich_day(day: dict[str, Any]) -> dict[str, Any]:
     enriched["artifact_done"] = artifact_done
     enriched["artifact_total"] = artifact_total
     enriched["completion_pct"] = pct(task_done + artifact_done, task_total + artifact_total)
+    guide = load_guide(enriched["num"])
+    if guide:
+        enriched["guide"] = guide
     return enriched
 
 

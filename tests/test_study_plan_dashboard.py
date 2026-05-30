@@ -202,6 +202,64 @@ def test_render_dashboard_uses_react_static_index(tmp_path, monkeypatch) -> None
     assert 'id="initial-data"' not in html
 
 
+def test_load_guide_returns_none_when_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    result = dashboard.load_guide(1)
+
+    assert result is None
+
+
+def test_load_guide_returns_parsed_yaml(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    (guides_dir / "day01.yaml").write_text(
+        "day: 1\ntasks:\n  audit:\n    summary: Check files\n    steps:\n      - list dir\n    done_when: audit.md exists\n    time_minutes: 20\n    depends_on: []\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    result = dashboard.load_guide(1)
+
+    assert result is not None
+    assert result["day"] == 1
+    assert result["tasks"]["audit"]["summary"] == "Check files"
+    assert result["tasks"]["audit"]["steps"] == ["list dir"]
+    assert result["tasks"]["audit"]["time_minutes"] == 20
+
+
+def test_enrich_day_merges_guide(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    (guides_dir / "day01.yaml").write_text(
+        "day: 1\ntasks:\n  audit:\n    summary: Check files\n    steps:\n      - list dir\n    done_when: audit.md exists\n    time_minutes: 20\n    depends_on: []\ntotal_time_minutes: 20\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    day = {"num": 1, "week": 1, "tasks": {"audit": False}, "artifacts": {}}
+    enriched = dashboard.enrich_day(day)
+
+    assert "guide" in enriched
+    assert enriched["guide"]["tasks"]["audit"]["summary"] == "Check files"
+    assert enriched["guide"]["total_time_minutes"] == 20
+
+
+def test_enrich_day_no_guide_field_when_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    day = {"num": 1, "week": 1, "tasks": {"audit": False}, "artifacts": {}}
+    enriched = dashboard.enrich_day(day)
+
+    assert "guide" not in enriched
+
+
 def test_render_dashboard_has_clear_fallback_when_static_index_missing(tmp_path, monkeypatch) -> None:
     dashboard = load_dashboard_module()
     progress_file = tmp_path / "progress.yaml"
