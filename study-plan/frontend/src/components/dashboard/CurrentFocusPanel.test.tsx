@@ -43,8 +43,8 @@ test("checklist uses backend truthiness and exposes item status", () => {
     />,
   );
 
-  expect(screen.getByLabelText("done_task: done")).toBeInTheDocument();
-  expect(screen.getByLabelText("false_string_task: not done")).toBeInTheDocument();
+  expect(screen.getByLabelText("Done Task: done")).toBeInTheDocument();
+  expect(screen.getByLabelText("False String Task: not done")).toBeInTheDocument();
 });
 
 test("overview shows summary numbers", () => {
