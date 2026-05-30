@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import json
+import mimetypes
 import sys
 import threading
 import webbrowser
@@ -23,8 +24,8 @@ except ImportError:
 BASE_DIR = Path(__file__).parent
 PROGRESS_FILE = BASE_DIR / "progress.yaml"
 OUTPUT_HTML = BASE_DIR / "dashboard.html"
-CSS_FILE = BASE_DIR / "dashboard.css"
-JS_FILE = BASE_DIR / "dashboard.js"
+STATIC_DIR = BASE_DIR / "static"
+STATIC_INDEX = STATIC_DIR / "index.html"
 TAG_ORDER = ["kernel", "framework", "serving", "perf", "quant", "docs", "interview"]
 STATUS_OPTIONS = ["not_started", "in_progress", "done", "blocked", "skipped"]
 OPERATOR_STATUS_OPTIONS = [
@@ -334,6 +335,16 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: Any, code: int = 2
     handler.wfile.write(body)
 
 
+def file_response(handler: SimpleHTTPRequestHandler, path: Path) -> None:
+    body = path.read_bytes()
+    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    handler.send_response(200)
+    handler.send_header("Content-Type", content_type)
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -347,13 +358,18 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             json_response(self, get_api_data())
             return
         if parsed.path in ("/", "/dashboard.html"):
-            body = render_dashboard(embed_data=False).encode("utf-8")
+            body = render_dashboard().encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
             return
+        if parsed.path.startswith("/assets/"):
+            asset = STATIC_DIR / parsed.path.lstrip("/")
+            if asset.exists() and asset.is_file():
+                file_response(self, asset)
+                return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -385,64 +401,36 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-def render_dashboard(embed_data: bool = True) -> str:
-    data = get_api_data()
-    title = html.escape(data.get("meta", {}).get("title", "Study Plan"))
-    initial_data = ""
-    if embed_data:
-        payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-        initial_data = f'<script type="application/json" id="initial-data">{payload}</script>'
+def render_dashboard(embed_data: bool = False) -> str:
+    if STATIC_INDEX.exists():
+        return STATIC_INDEX.read_text(encoding="utf-8")
 
+    title = html.escape(load_progress().get("meta", {}).get("title", "Study Plan"))
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f6f8fb">
 <title>{title}</title>
-<link rel="stylesheet" href="dashboard.css">
+<style>
+body {{ margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #f8fafc; color: #172033; }}
+main {{ max-width: 760px; margin: 80px auto; padding: 24px; background: white; border: 1px solid #dbe3ee; border-radius: 8px; }}
+code {{ background: #eef2f7; border-radius: 4px; padding: 2px 4px; }}
+</style>
 </head>
 <body>
-<a class="skip-link" href="#app">Skip To Dashboard</a>
 <main>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">LLM Kernel Lab</p>
-      <h1>{title}</h1>
-      <p class="subtitle">本地可编辑进度面板。启动 <code>python study-plan/dashboard.py --serve</code> 后可保存到 <code>progress.yaml</code>。</p>
-    </div>
-    <div class="topbar-actions">
-      <button type="button" class="ghost" id="refresh-button">Refresh Data</button>
-    </div>
-  </header>
-  <div id="app" tabindex="-1">
-    <section class="empty-state" aria-live="polite">
-      <h2>Loading Dashboard…</h2>
-      <p>Reading progress data from the local workspace.</p>
-    </section>
-  </div>
+<h1>{title}</h1>
+<h2>React dashboard has not been built</h2>
+<p>Run <code>cd study-plan/frontend && npm install && npm run build</code>, then start <code>python study-plan/dashboard.py --serve</code>.</p>
 </main>
-<div
-  class="drawer"
-  id="drawer"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="editor-title"
-  aria-describedby="editor-help"
-  hidden
->
-  <form class="editor" id="editor" novalidate></form>
-</div>
-<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-{initial_data}
-<script src="dashboard.js"></script>
 </body>
 </html>
 """
 
 
 def build() -> None:
-    html_text = render_dashboard(embed_data=True)
+    html_text = render_dashboard()
     OUTPUT_HTML.write_text(html_text, encoding="utf-8")
     print(f"Generated {OUTPUT_HTML}")
 

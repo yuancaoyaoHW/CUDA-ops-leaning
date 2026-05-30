@@ -181,16 +181,37 @@ def test_get_api_data_exposes_editable_sections(tmp_path, monkeypatch) -> None:
     assert "cutlass" in api_data["gpu_libraries"]
 
 
-def test_render_dashboard_uses_external_assets_and_accessible_dialog(tmp_path, monkeypatch) -> None:
+def test_render_dashboard_uses_react_static_index(tmp_path, monkeypatch) -> None:
     dashboard = load_dashboard_module()
     progress_file = tmp_path / "progress.yaml"
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text(
+        '<!doctype html><div id="root"></div><script type="module" src="/assets/index.js"></script>',
+        encoding="utf-8",
+    )
     write_sample_progress(progress_file)
     monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+    monkeypatch.setattr(dashboard, "STATIC_DIR", static_dir)
+    monkeypatch.setattr(dashboard, "STATIC_INDEX", static_dir / "index.html")
 
-    html = dashboard.render_dashboard(embed_data=False)
+    html = dashboard.render_dashboard()
 
-    assert 'href="dashboard.css"' in html
-    assert 'src="dashboard.js"' in html
-    assert 'role="dialog"' in html
-    assert 'aria-modal="true"' in html
+    assert 'id="root"' in html
+    assert "/assets/index.js" in html
     assert 'id="initial-data"' not in html
+
+
+def test_render_dashboard_has_clear_fallback_when_static_index_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    static_dir = tmp_path / "static"
+    write_sample_progress(progress_file)
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+    monkeypatch.setattr(dashboard, "STATIC_DIR", static_dir)
+    monkeypatch.setattr(dashboard, "STATIC_INDEX", static_dir / "index.html")
+
+    html = dashboard.render_dashboard()
+
+    assert "React dashboard has not been built" in html
+    assert "npm run build" in html
