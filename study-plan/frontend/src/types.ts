@@ -31,6 +31,7 @@ export interface DashboardDay {
   artifact_done: number;
   artifact_total: number;
   completion_pct: number;
+  guide?: DayGuide;
 }
 
 export interface DashboardWeek {
@@ -82,6 +83,29 @@ export interface DashboardData {
     library_statuses: LibraryStatus[];
     tags: string[];
   };
+}
+
+export interface TaskGuide {
+  summary: string;
+  steps: string[];
+  done_when: string;
+  time_minutes: number;
+  depends_on: string[];
+  refs?: { title: string; url: string }[];
+}
+
+export interface ArtifactGuide {
+  summary: string;
+  done_when: string;
+  time_minutes: number;
+  depends_on: string[];
+  refs?: { title: string; url: string }[];
+}
+
+export interface DayGuide {
+  tasks: Record<string, TaskGuide>;
+  artifacts: Record<string, ArtifactGuide>;
+  total_time_minutes: number;
 }
 
 export type DayUpdates = Partial<Pick<
