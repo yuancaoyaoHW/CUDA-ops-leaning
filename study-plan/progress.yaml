@@ -127,6 +127,102 @@ operators:
       profile: false
       note: false
     kind: quant
+  masked_softmax:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: reduction
+  online_softmax:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: reduction
+  layernorm:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: reduction
+  fused_add_rmsnorm:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: reduction
+  swiglu:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: elementwise
+  gelu:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: elementwise
+  rope:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: elementwise
+  rmsnorm_cuda_ext:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: reduction
+    paths:
+      impl: kernels/cuda/rmsnorm_cuda_ext/rmsnorm_cuda_ext.cu
+      tests: tests/test_rmsnorm_cuda_ext.py
+      bench: benchmarks/bench_rmsnorm_cuda_ext.py
+      bench_json: reports/json/rmsnorm_cuda_ext_bench.json
+      note: notes/rmsnorm_cuda_ext.md
+  kv_cache_append:
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    kind: elementwise
 gpu_libraries:
   triton:
     status: in_progress
