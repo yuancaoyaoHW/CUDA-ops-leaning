@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Toaster, toast } from "sonner";
 import { getDashboard } from "@/api";
 import type { DashboardData } from "@/types";
+import { CurrentFocusPanel } from "./CurrentFocusPanel";
 import { DashboardLayout } from "./DashboardLayout";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./LoadingState";
+import { ProgressOverview } from "./ProgressOverview";
 
 export function DashboardApp() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -63,9 +65,12 @@ export function DashboardApp() {
         });
       }}
     >
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Dashboard Loaded</h2>
-      </section>
+      <div className="grid gap-4">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
+          <CurrentFocusPanel day={data.current_day} onEditDay={() => toast.info("Editor arrives in the next slice")} />
+          <ProgressOverview summary={data.summary} />
+        </section>
+      </div>
       <Toaster richColors position="bottom-right" />
     </DashboardLayout>
   );
