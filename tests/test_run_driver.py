@@ -80,3 +80,13 @@ def test_week_check_runs_all_three_sections(tmp_path):
     assert "strict verify" in out.lower() or "verify" in out.lower()
     assert "STAR" in out or "star" in out.lower()
     assert "drill" in out.lower() or "Algo" in out or "Cpp" in out
+
+
+def test_day_show_renders_slots_when_present(tmp_path):
+    setup_workspace(tmp_path)
+    res = run_driver(["day", "1"], cwd=tmp_path)
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    assert "main:" in out and "主线 fixture" in out
+    assert "depth:" in out and "深度 fixture" in out
+    assert "output:" in out and "输出 fixture" in out

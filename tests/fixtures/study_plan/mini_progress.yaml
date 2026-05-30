@@ -65,6 +65,10 @@ week1:
     weaknesses: ''
     next_fix: ''
     notes: ''
+    slots:
+      main: '主线 fixture'
+      depth: '深度 fixture'
+      output: '输出 fixture'
   day07:
     title: Week 1 check
     operator: row_softmax

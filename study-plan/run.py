@@ -150,6 +150,13 @@ def _day_show(n: int, wk: str, dk: str, day: dict, data: dict):
                 mark = "✓" if v else "✗"
                 print(f"    {mark} {k}")
 
+    slots = day.get("slots") or {}
+    if slots:
+        print("  slots:")
+        for key in ("main", "depth", "output"):
+            if key in slots:
+                print(f"    {key}: {slots[key]}")
+
     # Show suggested command
     cmd = _default_command(op, op_data, phase)
     if cmd:
