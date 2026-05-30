@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -192,7 +193,10 @@ def check_tests(
             rel = paths.tests.relative_to(repo_root)
         except ValueError:
             rel = paths.tests
-        cmd = f"pytest {rel} -v"
+        # Use `<sys.executable> -m pytest` so the subprocess inherits the same
+        # interpreter and sys.path setup (CWD added) as the parent process,
+        # which is what makes repo-local imports like `from kernels...` work.
+        cmd = f"{sys.executable} -m pytest {rel} -v"
     try:
         proc = subprocess.run(
             cmd,
