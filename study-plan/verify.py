@@ -123,3 +123,121 @@ def resolve_command(op_name: str, op: dict[str, Any], phase: str, repo_root: Pat
         target = paths.impl if phase != "note" else paths.note
         return f"# open {target.relative_to(repo_root)}"
     raise ValueError(f"unknown phase: {phase}")
+
+
+# ---- check_* ---------------------------------------------------------------
+
+
+def check_implementation(paths: Paths, *, strict: bool) -> bool:
+    """Non-strict: impl file exists. Strict: file exists AND non-empty."""
+    if not paths.impl.exists():
+        return False
+    if strict and paths.impl.stat().st_size == 0:
+        return False
+    return True
+
+
+def check_reference(op: dict[str, Any], paths: Paths, *, strict: bool) -> bool:
+    """Non-strict: impl file exists. Strict: grep for torch/pytorch_reference or inline flag."""
+    if not paths.impl.exists():
+        return False
+    if not strict:
+        return True
+    if op.get("reference_inline"):
+        return True
+    text = paths.impl.read_text(encoding="utf-8", errors="replace")
+    return bool(re.search(r"\b(import\s+torch|pytorch_reference|torch\.)", text))
+
+
+def check_tests(
+    op_name: str,
+    op: dict[str, Any],
+    paths: Paths,
+    thresholds: Thresholds,
+    *,
+    strict: bool,
+    repo_root: Path,
+    skip_tests: bool = False,
+) -> bool:
+    """Non-strict: test file exists. Strict: run pytest, exit 0."""
+    if not paths.tests.exists():
+        return False
+    if not strict:
+        return True
+    if skip_tests:
+        return False
+    overrides: dict[str, str] = (op.get("commands") or {})
+    if "tests" in overrides:
+        cmd = overrides["tests"]
+    else:
+        try:
+            rel = paths.tests.relative_to(repo_root)
+        except ValueError:
+            rel = paths.tests
+        cmd = f"pytest {rel} -v"
+    try:
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            cwd=str(repo_root),
+            timeout=thresholds.pytest_timeout_seconds,
+            capture_output=True,
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    except FileNotFoundError:
+        return False
+    return proc.returncode == 0
+
+
+def check_benchmark(paths: Paths, thresholds: Thresholds, *, strict: bool) -> bool:
+    """Non-strict: bench_json exists. Strict: JSON valid + required keys present and non-null."""
+    if not paths.bench_json.exists():
+        return False
+    if not strict:
+        return True
+    try:
+        data = json.loads(paths.bench_json.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    for key in thresholds.bench_required_keys:
+        if key not in data:
+            return False
+        v = data[key]
+        if v is None or v == "":
+            return False
+    return True
+
+
+def check_profile(paths: Paths, thresholds: Thresholds, *, strict: bool) -> bool:
+    """Non-strict: glob hits any file. Strict: glob hits AND any match >= min size."""
+    matches: list[Path] = []
+    for g in paths.profile_globs:
+        parent = g.parent
+        if not parent.exists():
+            continue
+        matches.extend(parent.glob(g.name))
+    if not matches:
+        return False
+    if not strict:
+        return True
+    return any(m.stat().st_size >= thresholds.profile_min_size_bytes for m in matches)
+
+
+def check_note(paths: Paths, thresholds: Thresholds, *, strict: bool) -> bool:
+    """Non-strict: file exists. Strict: line count + required sections."""
+    if not paths.note.exists():
+        return False
+    if not strict:
+        return True
+    text = paths.note.read_text(encoding="utf-8", errors="replace")
+    line_count = sum(1 for line in text.splitlines() if line.strip())
+    if line_count < thresholds.note_min_lines:
+        return False
+    lower = text.lower()
+    for section in thresholds.note_required_sections:
+        # normalize: underscores in config match spaces in headings
+        needle = section.lower().replace("_", " ")
+        if needle not in lower:
+            return False
+    return True
