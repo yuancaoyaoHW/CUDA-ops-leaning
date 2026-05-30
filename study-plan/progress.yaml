@@ -1,0 +1,525 @@
+week1:
+  day01:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day02:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day03:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day04:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day05:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day06:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day07:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    tasks:
+      morning_review: false
+      afternoon_mock: false
+      evening_prep: false
+    notes: ''
+week2:
+  day08:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day09:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day10:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day11:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day12:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day13:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning_kernel: false
+      afternoon_theory: false
+      evening_distributed: false
+    notes: ''
+  day14:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    tasks:
+      morning_review: false
+      afternoon_mock: false
+      evening_stage: false
+    notes: ''
+week3:
+  day15:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day16:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day17:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day18:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day19:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day20:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day21:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+week4:
+  day22:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day23:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day24:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day25:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day26:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day27:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day28:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+week5:
+  day29:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day30:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day31:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day32:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day33:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day34:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day35:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+week6:
+  day36:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day37:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day38:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day39:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day40:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day41:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day42:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+week7:
+  day43:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day44:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day45:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day46:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day47:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day48:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day49:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+week8:
+  day50:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day51:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day52:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day53:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day54:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day55:
+    date: ''
+    status: not_started
+    daily_check: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
+  day56:
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    stage_check_score: 0
+    tasks:
+      morning: false
+      afternoon: false
+      evening: false
+    notes: ''
