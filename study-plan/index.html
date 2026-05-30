@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Infra 学习进度</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d2e;
+  --surface2: #242838;
+  --surface3: #2e3348;
+  --border: #363b4e;
+  --text: #e2e8f0;
+  --text-dim: #64748b;
+  --accent: #6366f1;
+  --accent-light: #818cf8;
+  --green: #22c55e;
+  --green-dim: #166534;
+  --yellow: #eab308;
+  --yellow-dim: #854d0e;
+  --red: #ef4444;
+  --red-dim: #991b1b;
+  --cyan: #06b6d4;
+  --purple: #a855f7;
+  --radius: 10px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.app { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+/* ─── Header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 1.5rem; color: var(--accent-light); }
+.header .meta { color: var(--text-dim); font-size: 0.85rem; }
+
+/* ─── Stats Cards ─── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+}
+.stat-card .value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+.stat-card .label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* ─── Progress Bar ─── */
+.progress-section { margin-bottom: 32px; }
+.progress-bar-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+.progress-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+.progress-bar-track {
+  height: 8px;
+  background: var(--surface3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* ─── Week Grid ─── */
+.weeks-section { margin-bottom: 32px; }
+.weeks-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+.week-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.week-label {
+  width: 60px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.day-cell {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1px solid transparent;
+}
+.day-cell:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(99,102,241,0.4);
+  z-index: 10;
+}
+.day-cell.not_started { background: var(--surface2); color: var(--text-dim); }
+.day-cell.in_progress { background: var(--yellow-dim); color: var(--yellow); border-color: var(--yellow); }
+.day-cell.done { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+.day-cell.skipped { background: var(--red-dim); color: var(--red); border-color: var(--red); }
+
+/* ─── Chart ─── */
+.chart-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 32px;
+}
+.chart-section h3 {
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  color: var(--text-dim);
+}
+.chart-container { position: relative; height: 120px; }
+.chart-bar {
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s;
+}
+.chart-bar:hover { opacity: 0.8; }
+.chart-label {
+  position: absolute;
+  bottom: -18px;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-align: center;
+  width: 16px;
+}
+
+/* ─── Milestones ─── */
+.milestones {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 32px;
+}
+.milestones h3 {
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  color: var(--text-dim);
+}
+.milestone-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.milestone-item:last-child { border-bottom: none; }
+.milestone-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.milestone-icon.done { background: var(--green-dim); color: var(--green); }
+.milestone-icon.pending { background: var(--surface3); color: var(--text-dim); }
+
+/* ─── Modal ─── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h3 {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  color: var(--accent-light);
+}
+.modal-field {
+  margin-bottom: 16px;
+}
+.modal-field label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.modal-field select,
+.modal-field input,
+.modal-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.modal-field textarea { resize: vertical; min-height: 60px; }
+.modal-field select:focus,
+.modal-field input:focus,
+.modal-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.task-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.task-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.task-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-light); }
+.btn-secondary { background: var(--surface3); color: var(--text); }
+.btn-secondary:hover { background: var(--border); }
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--green-dim);
+  color: var(--green);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 2000;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ─── Daily Check Stars ─── */
+.stars { display: flex; gap: 4px; }
+.star {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.15s;
+}
+.star:hover { transform: scale(1.3); }
+.star.active { color: var(--yellow); }
+.star.inactive { color: var(--surface3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🚀 AI Infra 8 周学习计划</h1>
+    <div class="meta" id="last-update"></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="progress-section" id="progress-bars"></div>
+
+  <div class="weeks-section">
+    <h2>📅 每周进度</h2>
+    <div id="week-grid"></div>
+  </div>
+
+  <div class="chart-section">
+    <h3>📈 日检分数趋势</h3>
+    <div class="chart-container" id="chart"></div>
+  </div>
+
+  <div class="milestones">
+    <h3>🏁 里程碑</h3>
+    <div id="milestones-list"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Day 1</h3>
+    <div class="modal-field">
+      <label>状态</label>
+      <select id="modal-status">
+        <option value="not_started">未开始</option>
+        <option value="in_progress">进行中</option>
+        <option value="done">已完成</option>
+        <option value="skipped">跳过</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>日期</label>
+      <input type="date" id="modal-date">
+    </div>
+    <div class="modal-field">
+      <label>日检分数</label>
+      <div class="stars" id="modal-stars">
+        <div class="star inactive" data-val="1">★</div>
+        <div class="star inactive" data-val="2">★</div>
+        <div class="star inactive" data-val="3">★</div>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>子任务</label>
+      <div class="task-checks" id="modal-tasks"></div>
+    </div>
+    <div class="modal-field">
+      <label>笔记</label>
+      <textarea id="modal-notes" placeholder="今天的收获、卡点..."></textarea>
+    </div>
+    <div class="modal-field" id="modal-weekly-field" style="display:none">
+      <label>周检分数 (0-21)</label>
+      <input type="number" id="modal-weekly" min="0" max="21">
+    </div>
+    <div class="modal-field" id="modal-stage-field" style="display:none">
+      <label>阶段检分数 (0-100)</label>
+      <input type="number" id="modal-stage" min="0" max="100">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveDay()">保存</button>
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ 已保存</div>
+
+<script>
+let DATA = null;
+let currentDay = null;
+
+async function fetchData() {
+  const res = await fetch('/api/progress');
+  DATA = await res.json();
+  render();
+}
+
+function render() {
+  renderStats();
+  renderProgressBars();
+  renderWeekGrid();
+  renderChart();
+  renderMilestones();
+  renderLastUpdate();
+}
+
+function getAllDays() {
+  const days = [];
+  DATA.weeks.forEach(w => w.days.forEach(d => days.push(d)));
+  return days;
+}
+
+function renderStats() {
+  const days = getAllDays();
+  const done = days.filter(d => d.status === 'done').length;
+  const total = days.length;
+  const tasksDone = days.reduce((s, d) => s + Object.values(d.tasks).filter(Boolean).length, 0);
+  const tasksTotal = days.reduce((s, d) => s + Object.keys(d.tasks).length, 0);
+  const checks = days.filter(d => d.daily_check > 0);
+  const avgCheck = checks.length ? (checks.reduce((s, d) => s + d.daily_check, 0) / checks.length).toFixed(1) : '—';
+  const currentWeek = Math.min(8, Math.floor(done / 7) + 1);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="value">${done}/${total}</div><div class="label">天数完成</div></div>
+    <div class="stat-card"><div class="value">${tasksDone}/${tasksTotal}</div><div class="label">子任务</div></div>
+    <div class="stat-card"><div class="value">${avgCheck}</div><div class="label">日检均分</div></div>
+    <div class="stat-card"><div class="value">W${currentWeek}</div><div class="label">当前周</div></div>
+    <div class="stat-card"><div class="value">${(done/total*100).toFixed(0)}%</div><div class="label">总进度</div></div>
+  `;
+}
+
+function renderProgressBars() {
+  const days = getAllDays();
+  const done = days.filter(d => d.status === 'done').length;
+  const total = days.length;
+  const tasksDone = days.reduce((s, d) => s + Object.values(d.tasks).filter(Boolean).length, 0);
+  const tasksTotal = days.reduce((s, d) => s + Object.keys(d.tasks).length, 0);
+
+  document.getElementById('progress-bars').innerHTML = `
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-header"><span>天数进度</span><span>${done}/${total}</span></div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${done/total*100}%;background:var(--green)"></div></div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-header"><span>子任务进度</span><span>${tasksDone}/${tasksTotal}</span></div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${tasksTotal?tasksDone/tasksTotal*100:0}%;background:var(--cyan)"></div></div>
+    </div>
+  `;
+}
+
+function renderWeekGrid() {
+  const container = document.getElementById('week-grid');
+  container.innerHTML = '';
+  DATA.weeks.forEach(week => {
+    const row = document.createElement('div');
+    row.className = 'week-row';
+    row.innerHTML = `<span class="week-label">Week ${week.num}</span>`;
+    week.days.forEach(day => {
+      const cell = document.createElement('div');
+      cell.className = `day-cell ${day.status}`;
+      cell.textContent = day.num;
+      cell.title = `Day ${day.num}: ${day.title}`;
+      cell.onclick = () => openModal(day);
+      row.appendChild(cell);
+    });
+    container.appendChild(row);
+  });
+}
+
+function renderChart() {
+  const container = document.getElementById('chart');
+  const days = getAllDays().filter(d => d.daily_check > 0);
+  if (!days.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);font-size:0.85rem;padding:40px 0;text-align:center">还没有日检数据</div>';
+    return;
+  }
+  const maxH = 100;
+  const gap = 24;
+  let html = '';
+  days.forEach((d, i) => {
+    const h = (d.daily_check / 3) * maxH;
+    const colors = ['', 'var(--red)', 'var(--yellow)', 'var(--green)'];
+    const left = i * gap;
+    html += `<div class="chart-bar" style="left:${left}px;height:${h}px;background:${colors[d.daily_check]}"></div>`;
+    html += `<div class="chart-label" style="left:${left}px">${d.num}</div>`;
+  });
+  container.style.width = (days.length * gap) + 'px';
+  container.innerHTML = html;
+}
+
+function renderMilestones() {
+  const days = getAllDays();
+  const container = document.getElementById('milestones-list');
+  container.innerHTML = DATA.milestones.map(m => {
+    const day = days.find(d => d.num === m.day);
+    const done = day && day.status === 'done';
+    return `<div class="milestone-item">
+      <div class="milestone-icon ${done ? 'done' : 'pending'}">${done ? '✓' : m.day}</div>
+      <span>W${Math.ceil(m.day/7)} Day ${m.day}: ${m.text}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderLastUpdate() {
+  const days = getAllDays().filter(d => d.date);
+  if (days.length) {
+    const last = days[days.length - 1];
+    document.getElementById('last-update').textContent = `最近更新: Day ${last.num} (${last.date})`;
+  }
+}
+
+// ─── Modal ───
+
+function openModal(day) {
+  currentDay = day;
+  document.getElementById('modal-title').textContent = `Day ${day.num}: ${day.title}`;
+  document.getElementById('modal-status').value = day.status;
+  document.getElementById('modal-date').value = day.date || new Date().toISOString().split('T')[0];
+  document.getElementById('modal-notes').value = day.notes || '';
+
+  // Stars
+  const stars = document.querySelectorAll('#modal-stars .star');
+  stars.forEach(s => {
+    const val = parseInt(s.dataset.val);
+    s.className = val <= day.daily_check ? 'star active' : 'star inactive';
+  });
+
+  // Tasks
+  const tasksDiv = document.getElementById('modal-tasks');
+  const taskLabels = { morning: '上午', afternoon: '下午', evening: '晚上',
+    morning_kernel: '上午 Kernel', afternoon_theory: '下午 理论', evening_distributed: '晚上 分布式',
+    morning_review: '上午 复习', afternoon_mock: '下午 Mock', evening_prep: '晚上 预习',
+    evening_stage: '晚上 阶段检' };
+  tasksDiv.innerHTML = Object.entries(day.tasks).map(([k, v]) => `
+    <label class="task-check">
+      <input type="checkbox" data-task="${k}" ${v ? 'checked' : ''}>
+      ${taskLabels[k] || k}
+    </label>
+  `).join('');
+
+  // Weekly/Stage fields
+  const isReviewDay = [7,14,21,28,35,42,49,56].includes(day.num);
+  const isStageDay = [14,28,42,49].includes(day.num);
+  document.getElementById('modal-weekly-field').style.display = isReviewDay ? 'block' : 'none';
+  document.getElementById('modal-stage-field').style.display = isStageDay ? 'block' : 'none';
+  if (isReviewDay) document.getElementById('modal-weekly').value = day.weekly_check_score || '';
+  if (isStageDay) document.getElementById('modal-stage').value = day.stage_check_score || '';
+
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  currentDay = null;
+}
+
+// Star click
+document.getElementById('modal-stars').addEventListener('click', e => {
+  const star = e.target.closest('.star');
+  if (!star) return;
+  const val = parseInt(star.dataset.val);
+  document.querySelectorAll('#modal-stars .star').forEach(s => {
+    s.className = parseInt(s.dataset.val) <= val ? 'star active' : 'star inactive';
+  });
+});
+
+// Close on overlay click
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ESC to close
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+async function saveDay() {
+  if (!currentDay) return;
+
+  const stars = document.querySelectorAll('#modal-stars .star.active');
+  const dailyCheck = stars.length;
+
+  const tasks = {};
+  document.querySelectorAll('#modal-tasks input[type="checkbox"]').forEach(cb => {
+    tasks[cb.dataset.task] = cb.checked;
+  });
+
+  const updates = {
+    status: document.getElementById('modal-status').value,
+    date: document.getElementById('modal-date').value,
+    daily_check: dailyCheck,
+    tasks: tasks,
+    notes: document.getElementById('modal-notes').value,
+  };
+
+  const weeklyField = document.getElementById('modal-weekly');
+  if (weeklyField.offsetParent !== null && weeklyField.value) {
+    updates.weekly_check_score = parseInt(weeklyField.value);
+  }
+  const stageField = document.getElementById('modal-stage');
+  if (stageField.offsetParent !== null && stageField.value) {
+    updates.stage_check_score = parseInt(stageField.value);
+  }
+
+  const res = await fetch('/api/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day: currentDay.num, updates }),
+  });
+  const result = await res.json();
+
+  if (result.ok) {
+    closeModal();
+    showToast('✓ 已保存');
+    await fetchData();
+  } else {
+    showToast('✗ 保存失败: ' + (result.error || ''), true);
+  }
+}
+
+function showToast(msg, isError) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.background = isError ? 'var(--red-dim)' : 'var(--green-dim)';
+  toast.style.color = isError ? 'var(--red)' : 'var(--green)';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// Init
+fetchData();
+</script>
+</body>
+</html>
