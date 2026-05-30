@@ -7,6 +7,7 @@ import { CurrentFocusPanel } from "./CurrentFocusPanel";
 import { DashboardLayout } from "./DashboardLayout";
 import { EmptyState } from "./EmptyState";
 import { LoadingState } from "./LoadingState";
+import { InsightRail } from "./InsightRail";
 import { PlanFilters } from "./PlanFilters";
 import { ProgressOverview } from "./ProgressOverview";
 import { WeekPlanList } from "./WeekPlanList";
@@ -79,18 +80,25 @@ export function DashboardApp() {
           <CurrentFocusPanel day={data.current_day} onEditDay={() => toast.info("Editor arrives in the next slice")} />
           <ProgressOverview summary={data.summary} />
         </section>
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(180px,0.45fr)_minmax(0,1.55fr)] lg:items-end">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Plan</h2>
-              <p className="text-sm text-slate-600">Filtered by week, status, tag, and search.</p>
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(180px,0.45fr)_minmax(0,1.55fr)] lg:items-end">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">Plan</h2>
+                <p className="text-sm text-slate-600">Filtered by week, status, tag, and search.</p>
+              </div>
+              <PlanFilters data={data} filters={filters} onChange={setFilters} />
             </div>
-            <PlanFilters data={data} filters={filters} onChange={setFilters} />
-          </div>
-          <WeekPlanList
-            weeks={filterWeeks(data, filters)}
-            currentWeek={currentWeek(data)}
-            onEditDay={() => toast.info("Editor arrives in the next slice")}
+            <WeekPlanList
+              weeks={filterWeeks(data, filters)}
+              currentWeek={currentWeek(data)}
+              onEditDay={() => toast.info("Editor arrives in the next slice")}
+            />
+          </section>
+          <InsightRail
+            data={data}
+            onEditOperator={() => toast.info("Editor arrives in the next slice")}
+            onEditLibrary={() => toast.info("Editor arrives in the next slice")}
           />
         </section>
       </div>
