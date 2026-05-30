@@ -102,6 +102,12 @@ def _day_show(n: int, wk: str, dk: str, day: dict, data: dict):
 
     if not op:
         print("  (no operator — review/gate day)")
+        slots = day.get("slots") or {}
+        if slots:
+            print("  slots:")
+            for key in ("main", "depth", "output"):
+                if key in slots:
+                    print(f"    {key}: {slots[key]}")
         return
 
     # Resolve paths and show artifacts

@@ -90,3 +90,26 @@ def test_day_show_renders_slots_when_present(tmp_path):
     assert "main:" in out and "主线 fixture" in out
     assert "depth:" in out and "深度 fixture" in out
     assert "output:" in out and "输出 fixture" in out
+
+
+def test_day_show_renders_slots_on_review_day_without_operator(tmp_path):
+    import yaml
+
+    setup_workspace(tmp_path)
+    yaml_path = tmp_path / "study-plan" / "progress.yaml"
+    data = yaml.safe_load(yaml_path.read_text())
+    data["week1"]["day07"].pop("operator", None)
+    data["week1"]["day07"]["slots"] = {
+        "main": "review-main",
+        "depth": "review-depth",
+        "output": "review-output",
+    }
+    yaml_path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+
+    res = run_driver(["day", "7"], cwd=tmp_path)
+    assert res.returncode == 0, res.stderr
+    out = res.stdout
+    assert "no operator" in out
+    assert "main:" in out and "review-main" in out
+    assert "depth:" in out and "review-depth" in out
+    assert "output:" in out and "review-output" in out
