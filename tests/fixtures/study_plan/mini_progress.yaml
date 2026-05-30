@@ -1,0 +1,85 @@
+meta:
+  title: Test Plan
+  verify_defaults:
+    note_min_lines: 30
+    note_required_sections: ["bottleneck", "next_experiment"]
+    bench_required_keys_default: ["gbps"]
+    bench_required_keys_gemm: ["tflops"]
+    profile_extensions: [".ncu-rep", ".nsys-rep"]
+    profile_min_size_bytes: 1024
+    pytest_timeout_seconds: 60
+operators:
+  row_softmax:
+    kind: reduction
+    status: not_started
+    artifacts:
+      reference: false
+      implementation: false
+      tests: false
+      benchmark: false
+      profile: false
+      note: false
+    notes: ''
+  axpy:
+    kind: elementwise
+    status: benchmark_stage
+    artifacts:
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: false
+      note: false
+    notes: ''
+gpu_libraries:
+  triton:
+    status: in_progress
+    evidence: [row_softmax]
+week0:
+  day00:
+    title: Warmup gate
+    operators: [axpy]
+    phase: review
+    date: ''
+    status: not_started
+    daily_check: 0
+    jd_tags: [kernel, perf]
+    tasks: {finish_axpy_note: false}
+    artifacts: {}
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+week1:
+  day01:
+    title: Day One
+    operator: row_softmax
+    phase: reference
+    date: ''
+    status: not_started
+    daily_check: 0
+    jd_tags: [kernel]
+    tasks: {audit: false}
+    artifacts: {reference: false}
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
+  day07:
+    title: Week 1 check
+    operator: row_softmax
+    phase: review
+    date: ''
+    status: not_started
+    daily_check: 0
+    weekly_check_score: 0
+    star_filled: false
+    algo_drill_done: false
+    cpp_drill_done: false
+    jd_tags: [interview]
+    tasks: {weekly_check: false}
+    artifacts: {}
+    verification: ''
+    weaknesses: ''
+    next_fix: ''
+    notes: ''
