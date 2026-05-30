@@ -2,6 +2,7 @@ import { CalendarDays, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { truthy } from "@/dashboardModel";
 import type { DashboardDay } from "@/types";
 import { StatusBadge } from "./StatusBadge";
 
@@ -23,7 +24,7 @@ export function CurrentFocusPanel({ day, onEditDay }: CurrentFocusPanelProps) {
 
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Next Step</p>
           <h2 className="mt-1 text-lg font-semibold text-slate-950">{day.title}</h2>
@@ -79,12 +80,23 @@ function Checklist({ title, items }: { title: string; items: Record<string, unkn
     <div>
       <p className="mb-2 text-xs font-semibold text-slate-600">{title}</p>
       <ul className="grid gap-1.5">
-        {Object.entries(items).map(([key, value]) => (
-          <li key={key} className="flex items-start gap-2 text-sm text-slate-700">
-            <CheckCircle2 className={value ? "mt-0.5 h-4 w-4 text-emerald-600" : "mt-0.5 h-4 w-4 text-slate-300"} />
-            <span>{key}</span>
-          </li>
-        ))}
+        {Object.entries(items).map(([key, value]) => {
+          const done = truthy(value);
+          return (
+            <li
+              key={key}
+              className="flex items-start gap-2 text-sm text-slate-700"
+              aria-label={`${key}: ${done ? "done" : "not done"}`}
+            >
+              <CheckCircle2
+                aria-hidden="true"
+                className={done ? "mt-0.5 h-4 w-4 text-emerald-600" : "mt-0.5 h-4 w-4 text-slate-300"}
+              />
+              <span>{key}</span>
+              <span className="sr-only">{done ? "done" : "not done"}</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

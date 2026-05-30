@@ -1,4 +1,6 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { expect, test, vi } from "vitest";
 import { CurrentFocusPanel } from "./CurrentFocusPanel";
 import { ProgressOverview } from "./ProgressOverview";
 import type { DashboardDay, DashboardData } from "@/types";
@@ -21,14 +23,28 @@ const day = {
   daily_check: 0,
 } satisfies DashboardDay;
 
-test("current focus panel shows day details and edit action", () => {
-  render(<CurrentFocusPanel day={day} onEditDay={() => undefined} />);
+test("current focus panel shows day details and edit action", async () => {
+  const onEditDay = vi.fn();
+  render(<CurrentFocusPanel day={day} onEditDay={onEditDay} />);
 
   expect(screen.getByRole("heading", { name: day.title })).toBeInTheDocument();
   expect(screen.getByText("Next Fix")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /edit day 01/i })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /edit day 01/i }));
+  expect(onEditDay).toHaveBeenCalledWith(day);
   expect(screen.getByText("0/2")).toBeInTheDocument();
   expect(screen.getByText("0/1")).toBeInTheDocument();
+});
+
+test("checklist uses backend truthiness and exposes item status", () => {
+  render(
+    <CurrentFocusPanel
+      day={{ ...day, tasks: { done_task: "complete", false_string_task: "false" } }}
+      onEditDay={() => undefined}
+    />,
+  );
+
+  expect(screen.getByLabelText("done_task: done")).toBeInTheDocument();
+  expect(screen.getByLabelText("false_string_task: not done")).toBeInTheDocument();
 });
 
 test("overview shows summary numbers", () => {
