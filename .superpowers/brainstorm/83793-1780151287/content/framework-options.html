@@ -1,0 +1,184 @@
+<style>
+  .framework-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+  }
+  .framework-card {
+    cursor: pointer;
+  }
+  .mini-dashboard {
+    min-height: 230px;
+    border-radius: 14px;
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+  .mini-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .mini-title {
+    width: 42%;
+    height: 12px;
+    border-radius: 999px;
+    background: #111827;
+  }
+  .mini-button {
+    width: 58px;
+    height: 24px;
+    border-radius: 7px;
+    background: #2563eb;
+  }
+  .mini-layout {
+    display: grid;
+    grid-template-columns: 1.5fr 0.8fr;
+    gap: 10px;
+  }
+  .mini-panel {
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    padding: 10px;
+  }
+  .mini-line {
+    height: 8px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    margin: 7px 0;
+  }
+  .mini-line.short { width: 55%; }
+  .mini-line.mid { width: 76%; }
+  .mini-row {
+    height: 24px;
+    border-radius: 7px;
+    background: #f1f5f9;
+    margin-top: 7px;
+  }
+  .shadcn .mini-dashboard {
+    background: #fafafa;
+  }
+  .shadcn .mini-panel {
+    border-color: #d4d4d8;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+  .shadcn .mini-button {
+    background: #18181b;
+  }
+  .heroui .mini-dashboard {
+    background: linear-gradient(135deg, #eef2ff, #f8fafc 58%, #ecfeff);
+  }
+  .heroui .mini-panel {
+    border-color: rgba(99, 102, 241, 0.22);
+    box-shadow: 0 16px 40px rgba(37, 99, 235, 0.12);
+  }
+  .heroui .mini-button {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+  }
+  .antd .mini-dashboard {
+    background: #f5f7fb;
+  }
+  .antd .mini-panel {
+    border-radius: 6px;
+    border-color: #d9d9d9;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+  .antd .mini-button {
+    background: #1677ff;
+    border-radius: 6px;
+  }
+  @media (max-width: 900px) {
+    .framework-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<h2>当前 dashboard 的 3 个前端框架方向</h2>
+<p class="subtitle">按你的选择，这些方案都接受引入 Node/Vite/React。点击你觉得最符合预期的方向。</p>
+
+<div class="framework-grid">
+  <div class="card framework-card shadcn" data-choice="shadcn" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mini-dashboard">
+        <div class="mini-top"><div class="mini-title"></div><div class="mini-button"></div></div>
+        <div class="mini-layout">
+          <div class="mini-panel">
+            <div class="mini-line mid"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-line"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Vite + React + Tailwind + shadcn/ui</h3>
+      <p>最推荐。审美克制、组件可复制进项目、很适合把 dashboard 做成干净的工程工具。</p>
+    </div>
+  </div>
+
+  <div class="card framework-card heroui" data-choice="heroui" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mini-dashboard">
+        <div class="mini-top"><div class="mini-title"></div><div class="mini-button"></div></div>
+        <div class="mini-layout">
+          <div class="mini-panel">
+            <div class="mini-line mid"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-line"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Vite + React + HeroUI</h3>
+      <p>开箱更好看，动效和可访问性强。缺点是视觉会更“产品化”，定制成本比 shadcn 稍高。</p>
+    </div>
+  </div>
+
+  <div class="card framework-card antd" data-choice="antd" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mini-dashboard">
+        <div class="mini-top"><div class="mini-title"></div><div class="mini-button"></div></div>
+        <div class="mini-layout">
+          <div class="mini-panel">
+            <div class="mini-line mid"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+          <div class="mini-panel">
+            <div class="mini-line"></div>
+            <div class="mini-line short"></div>
+            <div class="mini-row"></div>
+            <div class="mini-row"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Vite + React + Ant Design</h3>
+      <p>企业后台最稳。表格、表单、筛选很全，但默认气质偏传统，想“好看”需要更多主题重写。</p>
+    </div>
+  </div>
+</div>
