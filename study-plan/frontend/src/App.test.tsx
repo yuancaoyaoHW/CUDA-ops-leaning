@@ -71,7 +71,7 @@ test("refresh keeps loaded dashboard visible when refresh fails", async () => {
 
   expect(await screen.findByRole("heading", { name: "大模型推理框架/加速 8 周计划" })).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
+  await userEvent.click(screen.getByRole("button", { name: "Refresh data" }));
 
   await waitFor(() => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -92,7 +92,7 @@ test("refresh can load new dashboard data", async () => {
 
   expect(await screen.findByRole("heading", { name: "大模型推理框架/加速 8 周计划" })).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
+  await userEvent.click(screen.getByRole("button", { name: "Refresh data" }));
 
   expect(await screen.findByRole("heading", { name: "Updated Plan" })).toBeInTheDocument();
 });
