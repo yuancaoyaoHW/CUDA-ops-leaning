@@ -42,11 +42,27 @@ test("renders done_when criteria", () => {
   expect(screen.getByText("docs/audit.md 存在")).toBeInTheDocument();
 });
 
-test("renders reference links", () => {
-  render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
+test("renders local refs as plain text, external refs as links", () => {
+  const guidesWithExternal: Record<string, TaskGuide> = {
+    audit: {
+      ...taskGuides.audit,
+      refs: [
+        { title: "Kernels 目录", url: "./kernels/" },
+        { title: "Nsight Docs", url: "https://docs.nvidia.com/nsight-compute/" },
+      ],
+    },
+  };
+  render(
+    <GuidedChecklist title="Tasks" items={{ audit: false }} guides={guidesWithExternal} />,
+  );
 
-  const link = screen.getByRole("link", { name: "Kernels 目录" });
-  expect(link).toHaveAttribute("href", "./kernels/");
+  // Local ref is NOT a link
+  expect(screen.queryByRole("link", { name: "Kernels 目录" })).not.toBeInTheDocument();
+  expect(screen.getByText("Kernels 目录")).toBeInTheDocument();
+
+  // External ref IS a link
+  const extLink = screen.getByRole("link", { name: "Nsight Docs" });
+  expect(extLink).toHaveAttribute("href", "https://docs.nvidia.com/nsight-compute/");
 });
 
 test("shows dependency warning when prerequisite not done", () => {

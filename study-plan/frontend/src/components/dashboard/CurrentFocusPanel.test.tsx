@@ -84,7 +84,7 @@ test("renders guided checklist when guide is present", () => {
   expect(screen.getByText("~30min")).toBeInTheDocument();
   expect(screen.getByText("列出 kernels/ 目录")).toBeInTheDocument();
   expect(screen.getByText("docs/audit.md 存在")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Kernels 目录" })).toBeInTheDocument();
+  expect(screen.getByText("Kernels 目录")).toBeInTheDocument();
 });
 
 test("renders total time estimate when guide is present", () => {

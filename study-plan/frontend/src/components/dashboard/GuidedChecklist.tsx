@@ -1,6 +1,10 @@
-import { CheckCircle2, Clock, AlertTriangle, ExternalLink } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, ExternalLink, FileText } from "lucide-react";
 import { truthy } from "@/dashboardModel";
 import type { Checklist as ChecklistType, TaskGuide, ArtifactGuide } from "@/types";
+
+function isExternalUrl(url: string): boolean {
+  return /^https?:\/\//.test(url);
+}
 
 function humanize(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -89,18 +93,28 @@ export function GuidedChecklist({ title, items, guides }: GuidedChecklistProps) 
 
               {guide.refs && guide.refs.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {guide.refs.map((ref, i) => (
-                    <a
-                      key={i}
-                      href={ref.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                    >
-                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                      {ref.title}
-                    </a>
-                  ))}
+                  {guide.refs.map((ref, i) =>
+                    isExternalUrl(ref.url) ? (
+                      <a
+                        key={i}
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        {ref.title}
+                      </a>
+                    ) : (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 text-xs text-slate-500"
+                      >
+                        <FileText className="h-3 w-3" aria-hidden="true" />
+                        {ref.title} <code className="text-[10px] text-slate-400">{ref.url}</code>
+                      </span>
+                    ),
+                  )}
                 </div>
               ) : null}
             </li>
