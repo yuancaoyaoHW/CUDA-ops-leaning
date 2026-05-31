@@ -172,6 +172,7 @@ def test_get_api_data_exposes_editable_sections(tmp_path, monkeypatch) -> None:
     progress_file = tmp_path / "progress.yaml"
     write_sample_progress(progress_file)
     monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+    monkeypatch.setattr(dashboard, "_apply_verify", lambda data: data)
 
     api_data = dashboard.get_api_data()
 

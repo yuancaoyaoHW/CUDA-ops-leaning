@@ -1,0 +1,110 @@
+day: 8
+
+tasks:
+  implement_fusion:
+    summary: 实现 fused_add_rmsnorm，完成 residual + rmsnorm fusion 主线
+    steps:
+      - 创建 kernels/fused_add_rmsnorm/ 目录和参考实现文件
+      - 用 PyTorch 写 unfused 参考路径：y = rmsnorm(x + residual, weight)
+      - 用 Triton 实现单 kernel 完成 add、平方和、rsqrt、scale 和 store
+      - 支持常见 hidden size，并用 mask 处理非对齐列数
+      - 在 README 或 note 中记录 launch grid、BLOCK_SIZE 和 dtype 假设
+    done_when: fused_add_rmsnorm 的参考实现和 Triton 实现存在，能在一个脚本中与 PyTorch 参考输出对齐
+    time_minutes: 45
+    depends_on: []
+    refs:
+      - title: Triton fused softmax 教程中的 row-wise 编程模型
+        url: https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html
+      - title: vLLM fused_add_rms_norm 入口
+        url: https://github.com/vllm-project/vllm
+
+  add_tests:
+    summary: 为 fused_add_rmsnorm 添加 aligned 和 non-aligned 正确性测试
+    steps:
+      - 创建或更新 kernels/fused_add_rmsnorm/test_fused_add_rmsnorm.py
+      - 参数化 batch 和 hidden size，覆盖 2 的幂与非 2 的幂尺寸
+      - 覆盖 fp32 和 fp16 输入，比较 Triton 输出与 PyTorch unfused 参考
+      - 检查 residual 输入不被意外覆盖，除非实现明确声明 in-place
+      - 将可接受误差写在测试中并解释半精度误差来源
+    done_when: pytest kernels/fused_add_rmsnorm/test_fused_add_rmsnorm.py -v 全部 PASS
+    time_minutes: 30
+    depends_on: [implement_fusion]
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  add_benchmark:
+    summary: 编写 fused_add_rmsnorm benchmark，测量 fusion 前后的耗时
+    steps:
+      - 创建 kernels/fused_add_rmsnorm/bench_fused_add_rmsnorm.py
+      - 用 triton.testing.do_bench 分别测 fused kernel 和 unfused PyTorch 路径
+      - 覆盖 batch=[1, 16, 64, 256] 和 hidden=[1024, 4096, 8192]
+      - 输出 fused_ms、unfused_ms、speedup 和等效带宽
+      - 记录不同 batch/hidden 下 fusion 收益是否稳定
+    done_when: benchmark 脚本能输出完整表格，并包含 fused 与 unfused 对比
+    time_minutes: 30
+    depends_on: [add_tests]
+    refs:
+      - title: Triton benchmark 工具
+        url: https://triton-lang.org/main/python-api/generated/triton.testing.do_bench.html
+
+  add_profile_note:
+    summary: 用 NCU profile fused_add_rmsnorm，并记录瓶颈分析
+    steps:
+      - 创建单次运行的 profile 脚本，固定一个代表性 batch 和 hidden size
+      - 运行 ncu --set full 或 --set basic 采集 fused kernel
+      - 记录 dram throughput、sm throughput、occupancy 和寄存器压力
+      - 判断瓶颈来自内存带宽、寄存器压力还是 launch overhead
+      - 写入 kernels/fused_add_rmsnorm/PROFILE_NOTES.md
+    done_when: PROFILE_NOTES.md 包含关键 NCU 指标、瓶颈判断和下一步优化方向
+    time_minutes: 35
+    depends_on: [add_benchmark]
+    refs:
+      - title: Nsight Compute Profiling Guide
+        url: https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html
+
+  compare_unfused:
+    summary: 对比 fusion 前后 kernel 数量和 launch overhead，量化收益来源
+    steps:
+      - 统计 unfused 路径中 add、rmsnorm 相关操作触发的 kernel 数量
+      - 对比 fused 路径的 kernel 数量和总耗时
+      - 估算 launch 时间在小 batch 下占总耗时的比例
+      - 阅读 vLLM fused_add_rms_norm 调用路径，记录接口和约束
+      - 将结论写入 fused_add_rmsnorm 技术笔记
+    done_when: 技术笔记包含 fusion 前后 kernel 数、launch overhead、speedup 和 vLLM 走读结论
+    time_minutes: 30
+    depends_on: [add_profile_note]
+
+artifacts:
+  reference:
+    summary: PyTorch unfused 参考实现
+    done_when: kernels/fused_add_rmsnorm/reference.py 存在且可运行
+    time_minutes: 0
+    depends_on: [implement_fusion]
+  implementation:
+    summary: Triton fused_add_rmsnorm 实现
+    done_when: kernels/fused_add_rmsnorm/triton_fused_add_rmsnorm.py 存在且通过基本正确性检查
+    time_minutes: 0
+    depends_on: [implement_fusion]
+  tests:
+    summary: fused_add_rmsnorm 正确性测试
+    done_when: kernels/fused_add_rmsnorm/test_fused_add_rmsnorm.py 存在且 pytest 通过
+    time_minutes: 0
+    depends_on: [add_tests]
+  benchmark:
+    summary: fusion 前后 benchmark 脚本和结果
+    done_when: kernels/fused_add_rmsnorm/bench_fused_add_rmsnorm.py 能输出 fused/unfused 对比
+    time_minutes: 0
+    depends_on: [add_benchmark]
+  profile:
+    summary: fused kernel profile 数据或等效记录
+    done_when: 有 .ncu-rep 文件或 PROFILE_NOTES.md 中记录了关键 profile 指标
+    time_minutes: 0
+    depends_on: [add_profile_note]
+  note:
+    summary: vLLM fused_add_rms_norm 走读和 fusion 分析笔记
+    done_when: 技术笔记包含 launch overhead、瓶颈和 vLLM 走读结论
+    time_minutes: 0
+    depends_on: [compare_unfused]
+
+total_time_minutes: 170

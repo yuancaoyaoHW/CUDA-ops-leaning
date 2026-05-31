@@ -1,0 +1,88 @@
+day: 13
+
+tasks:
+  implement_contiguous_append:
+    summary: 实现 kv_cache_append toy，先完成 contiguous KV layout 写入
+    steps:
+      - 创建 kernels/kv_cache_append/ 目录和 PyTorch 参考实现
+      - 定义 contiguous cache layout：batch、seq、head、head_dim 的物理顺序
+      - 实现将当前 step 的 key/value append 到 cache 指定位置
+      - 用 Triton 实现写入 kernel，支持多 batch、多 head 和 mask
+      - 记录接口参数：cache、new_kv、positions、seq_len、stride
+    done_when: kv_cache_append Triton 实现能把新 token KV 写入 contiguous cache 正确位置
+    time_minutes: 45
+    depends_on: []
+    refs:
+      - title: vLLM PagedAttention 设计背景
+        url: https://blog.vllm.ai/2023/06/20/vllm.html
+
+  add_tests:
+    summary: 为 contiguous kv_cache_append 添加正确性和边界测试
+    steps:
+      - 创建 kernels/kv_cache_append/test_kv_cache_append.py
+      - 测试单 token append 和多 batch append
+      - 覆盖不同 num_heads、head_dim、seq positions
+      - 检查只更新目标位置，cache 其他位置不变
+      - 添加非连续 positions 或接近 max_seq_len 的边界用例
+    done_when: pytest kernels/kv_cache_append/test_kv_cache_append.py -v 全部 PASS
+    time_minutes: 35
+    depends_on: [implement_contiguous_append]
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  add_benchmark:
+    summary: benchmark kv_cache_append toy，测量写入带宽和 shape 影响
+    steps:
+      - 创建 kernels/kv_cache_append/bench_kv_cache_append.py
+      - 覆盖 batch、num_heads、head_dim、append token 数
+      - 输出 triton_ms、torch_index_copy_ms、GB/s
+      - 对比 contiguous 写入在连续 positions 和离散 positions 下的差异
+      - 记录小 batch 下 launch overhead 是否主导
+    done_when: benchmark 脚本输出 contiguous KV append 的性能表格
+    time_minutes: 30
+    depends_on: [add_tests]
+    refs:
+      - title: Triton benchmark 工具
+        url: https://triton-lang.org/main/python-api/generated/triton.testing.do_bench.html
+
+  paged_layout_design_note:
+    summary: 写 contiguous vs paged KV layout 设计分析，为 Week 5 PagedAttention 铺路
+    steps:
+      - 画出 contiguous layout 的地址计算和 append 写入路径
+      - 画出 paged layout 的 block table 和 page offset 访问方式
+      - 对比 contiguous 与 paged 在内存碎片、扩容、batching 上的差异
+      - 阅读 vLLM PagedAttention 或 KV cache 相关材料，记录术语
+      - 写 5 道 CUDA extension / fusion / KV layout 面经题
+    done_when: kernels/kv_cache_append/README.md 包含 contiguous vs paged 设计 doc 和 5 道面经题
+    time_minutes: 40
+    depends_on: [add_benchmark]
+
+artifacts:
+  reference:
+    summary: contiguous KV append PyTorch 参考实现
+    done_when: kernels/kv_cache_append/reference.py 存在且可运行
+    time_minutes: 0
+    depends_on: [implement_contiguous_append]
+  implementation:
+    summary: kv_cache_append Triton toy 实现
+    done_when: kernels/kv_cache_append/triton_kv_cache_append.py 存在且通过基本正确性检查
+    time_minutes: 0
+    depends_on: [implement_contiguous_append]
+  tests:
+    summary: kv_cache_append 正确性测试
+    done_when: kernels/kv_cache_append/test_kv_cache_append.py 存在且 pytest 通过
+    time_minutes: 0
+    depends_on: [add_tests]
+  benchmark:
+    summary: kv_cache_append benchmark 脚本和性能数据
+    done_when: kernels/kv_cache_append/bench_kv_cache_append.py 能输出性能对比
+    time_minutes: 0
+    depends_on: [add_benchmark]
+  note:
+    summary: contiguous vs paged KV layout 设计笔记
+    done_when: README 包含地址计算、layout 对比和面经题
+    time_minutes: 0
+    depends_on: [paged_layout_design_note]
+
+total_time_minutes: 150

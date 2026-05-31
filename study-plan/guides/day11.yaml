@@ -1,0 +1,65 @@
+day: 11
+
+tasks:
+  build_cuda_extension:
+    summary: 搭建最小 PyTorch C++/CUDA extension，用 C++/CUDA 重写 rmsnorm
+    steps:
+      - 创建 kernels/rmsnorm_cuda_ext/ 目录
+      - 添加 setup.py、C++ binding 文件和 CUDA kernel 文件
+      - 实现 rmsnorm forward：按行计算均方、rsqrt、乘 weight
+      - 暴露 Python import 入口，命名保持与现有 operator 风格一致
+      - 用一个最小 demo 脚本完成 build、import、forward 调用
+    done_when: rmsnorm_cuda_ext 能 build 成功，并可从 Python 调用 forward
+    time_minutes: 60
+    depends_on: []
+    refs:
+      - title: PyTorch C++/CUDA extension 教程
+        url: https://pytorch.org/tutorials/advanced/cpp_extension.html
+      - title: torch.utils.cpp_extension 文档
+        url: https://pytorch.org/docs/stable/cpp_extension.html
+
+  torch_check_validation:
+    summary: 为 CUDA extension 添加 TORCH_CHECK 输入校验和 dispatch 边界
+    steps:
+      - 在 C++ binding 中检查输入 tensor 是否在 CUDA 上
+      - 检查 x 和 weight dtype、shape、contiguous 状态
+      - 检查 hidden size 与 weight 长度一致
+      - 对不支持的 dtype 给出清晰错误信息
+      - 添加最小负例脚本确认错误信息可读
+    done_when: 非法输入会触发明确 TORCH_CHECK 错误，合法输入能正常运行
+    time_minutes: 30
+    depends_on: [build_cuda_extension]
+    refs:
+      - title: PyTorch Tensor checks in C++ extensions
+        url: https://pytorch.org/tutorials/advanced/cpp_extension.html
+
+  document_build_path:
+    summary: 记录 extension build/run/verify 路径和 WSL2 CUDA 12.6 排障策略
+    steps:
+      - 记录 setup.py build_ext --inplace 的完整命令
+      - 记录 JIT load 与 setup.py 两种方式的差异
+      - 记录 CUDA_HOME、编译器、PyTorch CUDA 版本检查方式
+      - 如果 build 失败，记录降级策略和错误日志
+      - 写入 kernels/rmsnorm_cuda_ext/README.md
+    done_when: README 包含 build、run、verify 命令，以及 build 失败时的排查路径
+    time_minutes: 35
+    depends_on: [build_cuda_extension, torch_check_validation]
+
+artifacts:
+  reference:
+    summary: rmsnorm CUDA extension 的 PyTorch 参考路径或校验脚本
+    done_when: kernels/rmsnorm_cuda_ext/reference.py 或等效 demo 存在
+    time_minutes: 0
+    depends_on: [build_cuda_extension]
+  implementation:
+    summary: PyTorch C++/CUDA extension 实现
+    done_when: setup.py、C++ binding 和 CUDA kernel 文件存在且可 build
+    time_minutes: 0
+    depends_on: [build_cuda_extension, torch_check_validation]
+  note:
+    summary: extension build/run/verify 笔记
+    done_when: kernels/rmsnorm_cuda_ext/README.md 存在且包含排障策略
+    time_minutes: 0
+    depends_on: [document_build_path]
+
+total_time_minutes: 125

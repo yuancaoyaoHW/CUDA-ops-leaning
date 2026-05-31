@@ -1,0 +1,101 @@
+day: 9
+
+tasks:
+  implement_swiglu:
+    summary: 实现 swiglu 激活 fusion，理解双 gate 路径和 SiLU 计算
+    steps:
+      - 创建 kernels/swiglu/ 目录和 PyTorch 参考实现
+      - 明确输入布局：x 分成 gate 和 up 两半，输出为 silu(gate) * up
+      - 用 Triton 实现 swiglu kernel，支持 fp32 和 fp16
+      - 用 mask 处理非对齐元素数，避免越界 load/store
+      - 添加 __main__ 快速检查，与 PyTorch 参考比较输出
+    done_when: python kernels/swiglu/triton_swiglu.py 运行通过，输出与 PyTorch 参考一致
+    time_minutes: 35
+    depends_on: []
+    refs:
+      - title: Triton elementwise kernel 教程
+        url: https://triton-lang.org/main/getting-started/tutorials/01-vector-add.html
+
+  implement_gelu:
+    summary: 实现 gelu 激活 kernel，落地 tanh 或 erf 近似路径
+    steps:
+      - 在 kernels/swiglu/ 中添加 gelu 参考实现和 Triton 实现
+      - 分别实现 tanh 近似和 torch.nn.functional.gelu 对齐检查
+      - 记录 erf/tanh 公式差异和误差范围
+      - 确认 fp16 输入时中间计算是否提升到 fp32
+      - 将 gelu 与 swiglu 共用的激活工具函数保持简单可读
+    done_when: gelu Triton 实现与 PyTorch gelu 在设定误差内一致
+    time_minutes: 30
+    depends_on: [implement_swiglu]
+    refs:
+      - title: PyTorch GELU 文档
+        url: https://pytorch.org/docs/stable/generated/torch.nn.GELU.html
+
+  add_tests:
+    summary: 为 swiglu 和 gelu 添加正确性测试
+    steps:
+      - 创建 kernels/swiglu/test_swiglu.py
+      - 覆盖 aligned 和 non-aligned token 数/hidden size
+      - 覆盖 fp32、fp16，以及正负大值输入
+      - 对 swiglu 比较 torch.nn.functional.silu(gate) * up
+      - 对 gelu 比较 torch.nn.functional.gelu 的 tanh 近似或默认实现
+    done_when: pytest kernels/swiglu/test_swiglu.py -v 全部 PASS
+    time_minutes: 30
+    depends_on: [implement_swiglu, implement_gelu]
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  add_benchmark:
+    summary: benchmark swiglu 和 gelu，观察激活 fusion 的收益与代价
+    steps:
+      - 创建 kernels/swiglu/bench_swiglu.py
+      - 对比 Triton swiglu 与 PyTorch unfused silu + mul
+      - 对比 Triton gelu 与 PyTorch gelu
+      - 输出 size、dtype、triton_ms、torch_ms、speedup
+      - 记录小尺寸 launch overhead 和大尺寸内存带宽影响
+    done_when: benchmark 脚本输出 swiglu 和 gelu 的性能对比表格
+    time_minutes: 30
+    depends_on: [add_tests]
+    refs:
+      - title: Triton benchmark 工具
+        url: https://triton-lang.org/main/python-api/generated/triton.testing.do_bench.html
+
+  libdevice_intrinsics:
+    summary: 阅读 Triton Libdevice，用激活函数理解 tanh、erf、rsqrt、silu 的落地
+    steps:
+      - 阅读 Triton Tutorial 07 Libdevice
+      - 查清 tanh、erf、rsqrt 在 Triton 中的可用接口和限制
+      - 对比 swiglu/gelu 中用到的 intrinsic 和近似公式
+      - 记录 fusion tradeoff：kernel launch、cache reuse、register pressure
+      - 写出 5 道激活 fusion 面经题和自己的回答要点
+    done_when: README 或 NOTE 中包含 Libdevice 走读、fusion tradeoff 和 5 道面经题
+    time_minutes: 35
+    depends_on: [add_benchmark]
+    refs:
+      - title: Triton Libdevice 教程
+        url: https://triton-lang.org/main/getting-started/tutorials/07-extern-functions.html
+
+artifacts:
+  reference:
+    summary: swiglu 和 gelu PyTorch 参考实现
+    done_when: kernels/swiglu/reference.py 存在且可运行
+    time_minutes: 0
+    depends_on: [implement_swiglu, implement_gelu]
+  implementation:
+    summary: swiglu 和 gelu Triton 实现
+    done_when: kernels/swiglu/triton_swiglu.py 存在且通过基本正确性检查
+    time_minutes: 0
+    depends_on: [implement_swiglu, implement_gelu]
+  tests:
+    summary: swiglu 和 gelu 正确性测试
+    done_when: kernels/swiglu/test_swiglu.py 存在且 pytest 通过
+    time_minutes: 0
+    depends_on: [add_tests]
+  benchmark:
+    summary: 激活函数 benchmark 脚本和性能数据
+    done_when: kernels/swiglu/bench_swiglu.py 能输出性能对比
+    time_minutes: 0
+    depends_on: [add_benchmark]
+
+total_time_minutes: 160

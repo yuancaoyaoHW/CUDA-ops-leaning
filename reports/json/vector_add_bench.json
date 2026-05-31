@@ -1,0 +1,97 @@
+{
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "gbps": 394.189649889139,
+  "op": "vector_add",
+  "results": [
+    {
+      "dtype": "torch.float32",
+      "gbps": 0.3820511800684844,
+      "implementation": "triton",
+      "ms": 0.03216323006199673,
+      "shape": [
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 1.2461981749195707,
+      "implementation": "torch",
+      "ms": 0.00986038998235017,
+      "shape": [
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 1.4451149145736966,
+      "implementation": "triton",
+      "ms": 0.0340125200455077,
+      "shape": [
+        4096
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 4.448265576013199,
+      "implementation": "torch",
+      "ms": 0.01104969996958971,
+      "shape": [
+        4096
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 23.042263590844776,
+      "implementation": "triton",
+      "ms": 0.03412998019484803,
+      "shape": [
+        65536
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 65.55621306776123,
+      "implementation": "torch",
+      "ms": 0.011996300017926842,
+      "shape": [
+        65536
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 394.189649889139,
+      "implementation": "triton",
+      "ms": 0.03192095988197252,
+      "shape": [
+        1048576
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 923.9097720302548,
+      "implementation": "torch",
+      "ms": 0.013619200035464019,
+      "shape": [
+        1048576
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 225.46379683999385,
+      "implementation": "triton",
+      "ms": 0.8929442102089524,
+      "shape": [
+        16777216
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 232.64238308526248,
+      "implementation": "torch",
+      "ms": 0.8653908601263538,
+      "shape": [
+        16777216
+      ]
+    }
+  ]
+}

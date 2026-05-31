@@ -1,0 +1,127 @@
+{
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "gbps": 1078.371864240051,
+  "op": "row_max",
+  "results": [
+    {
+      "dtype": "torch.float32",
+      "gbps": 4.443635487970935,
+      "implementation": "triton",
+      "ms": 0.029611789796035737,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 9.16693365435957,
+      "implementation": "torch",
+      "ms": 0.014354200102388859,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 4.647371365035943,
+      "implementation": "triton",
+      "ms": 0.02842380985384807,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 6.2276680336895245,
+      "implementation": "torch",
+      "ms": 0.02121114986948669,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 34.52497534481218,
+      "implementation": "triton",
+      "ms": 0.030430839979089797,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 68.16749484812087,
+      "implementation": "torch",
+      "ms": 0.015412389766424896,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 103.63272379096252,
+      "implementation": "triton",
+      "ms": 0.040512300038244575,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 193.68798018442044,
+      "implementation": "torch",
+      "ms": 0.021676099859178066,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 211.04539998330898,
+      "implementation": "triton",
+      "ms": 0.03978669992648065,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 457.9406651501793,
+      "implementation": "torch",
+      "ms": 0.01833599992096424,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 1078.371864240051,
+      "implementation": "triton",
+      "ms": 0.031131019932217896,
+      "shape": [
+        4096,
+        2048
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 588.6784991705382,
+      "implementation": "torch",
+      "ms": 0.05702741997083649,
+      "shape": [
+        4096,
+        2048
+      ]
+    }
+  ]
+}

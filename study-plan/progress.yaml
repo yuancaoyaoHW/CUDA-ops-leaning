@@ -88,14 +88,14 @@ operators:
     notes: masked values 使用 -inf；note 需要补齐 benchmark 数据。
     kind: reduction
   row_softmax:
-    status: not_started
+    status: complete
     artifacts:
-      reference: false
-      implementation: false
-      tests: false
-      benchmark: false
-      profile: false
-      note: false
+      reference: true
+      implementation: true
+      tests: true
+      benchmark: true
+      profile: true
+      note: true
     kind: reduction
   rmsnorm:
     status: not_started

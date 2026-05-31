@@ -1,0 +1,85 @@
+day: 10
+
+tasks:
+  implement_rope:
+    summary: 实现 RoPE Triton kernel，为 Week 4 attention 做位置编码铺垫
+    steps:
+      - 创建 kernels/rope/ 目录和 PyTorch 参考实现
+      - 明确输入形状：query/key、seq_len、num_heads、head_dim
+      - 实现半维旋转：x_even * cos - x_odd * sin，x_even * sin + x_odd * cos
+      - 支持 in-place 更新 query/key，必要时保留 out-of-place 参考路径
+      - 处理 fp16 输入和 fp32 sin/cos cache 的 dtype 转换
+    done_when: python kernels/rope/triton_rope.py 能对 query/key 应用 RoPE 并与参考实现对齐
+    time_minutes: 45
+    depends_on: []
+    refs:
+      - title: RoFormer RoPE 论文
+        url: https://arxiv.org/abs/2104.09864
+      - title: vLLM repository
+        url: https://github.com/vllm-project/vllm
+
+  add_tests:
+    summary: 为 RoPE 添加 in-place、半精度和非对齐尺寸测试
+    steps:
+      - 创建 kernels/rope/test_rope.py
+      - 参数化 seq_len、num_heads、head_dim，覆盖 head_dim=64、80、128
+      - 检查 query 和 key 都被正确旋转
+      - 测试 in-place 路径是否只修改目标 tensor
+      - 用 PyTorch 参考实现比较 fp32/fp16 输出误差
+    done_when: pytest kernels/rope/test_rope.py -v 全部 PASS
+    time_minutes: 35
+    depends_on: [implement_rope]
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  add_benchmark:
+    summary: benchmark RoPE，在不同序列长度和 head_dim 下对比 PyTorch 参考
+    steps:
+      - 创建 kernels/rope/bench_rope.py
+      - 覆盖 seq_len=[128, 1024, 4096]、head_dim=[64, 128]
+      - 对比 Triton in-place、Triton out-of-place 和 PyTorch 参考路径
+      - 输出 triton_ms、torch_ms、speedup 和有效带宽
+      - 记录 RoPE 是否主要受内存访问和 sin/cos load 影响
+    done_when: benchmark 脚本输出 RoPE 性能表格，并能说明主要瓶颈
+    time_minutes: 30
+    depends_on: [add_tests]
+    refs:
+      - title: Triton benchmark 工具
+        url: https://triton-lang.org/main/python-api/generated/triton.testing.do_bench.html
+
+  sin_cos_cache_strategy:
+    summary: 分析 sin/cos cache 策略，对比 fp32 cache 与在线计算
+    steps:
+      - 记录 fp32 sin/cos cache 的内存占用和访问模式
+      - 对比在线计算 sin/cos 的计算成本和实现复杂度
+      - 分析 in-place vs out-of-place 对内存带宽和接口安全性的影响
+      - 走读 vLLM pos_encoding.cu 的接口和 layout 假设
+      - 将结论写入 kernels/rope/README.md
+    done_when: README 包含 cache 策略、in-place 权衡和 vLLM pos_encoding 走读笔记
+    time_minutes: 35
+    depends_on: [add_benchmark]
+
+artifacts:
+  reference:
+    summary: RoPE PyTorch 参考实现
+    done_when: kernels/rope/reference.py 存在且可运行
+    time_minutes: 0
+    depends_on: [implement_rope]
+  implementation:
+    summary: RoPE Triton 实现
+    done_when: kernels/rope/triton_rope.py 存在且通过基本正确性检查
+    time_minutes: 0
+    depends_on: [implement_rope]
+  tests:
+    summary: RoPE 正确性测试
+    done_when: kernels/rope/test_rope.py 存在且 pytest 通过
+    time_minutes: 0
+    depends_on: [add_tests]
+  benchmark:
+    summary: RoPE benchmark 脚本和性能数据
+    done_when: kernels/rope/bench_rope.py 能输出性能对比
+    time_minutes: 0
+    depends_on: [add_benchmark]
+
+total_time_minutes: 145

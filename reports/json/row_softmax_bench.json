@@ -1,0 +1,320 @@
+{
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "gbps": 927.6334638683584,
+  "op": "row_softmax",
+  "operator": "row_softmax",
+  "results": [
+    {
+      "cols": 256,
+      "dtype": "float32",
+      "gbps": 6.165168229044665,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.04252016980899498,
+      "rows": 128,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "cols": 256,
+      "dtype": "float32",
+      "gbps": 13.289862493380655,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.019725110032595694,
+      "rows": 128,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "cols": 257,
+      "dtype": "float32",
+      "gbps": 5.951087954045851,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.04422183003043756,
+      "rows": 128,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "cols": 257,
+      "dtype": "float32",
+      "gbps": 20.640627177334167,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.012750000169035047,
+      "rows": 128,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "cols": 512,
+      "dtype": "float32",
+      "gbps": 52.02440125371293,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.040310930053237826,
+      "rows": 512,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "cols": 512,
+      "dtype": "float32",
+      "gbps": 165.89843572749223,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.012641180073842406,
+      "rows": 512,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float32",
+      "gbps": 206.31040758718527,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.04066013003466651,
+      "rows": 1024,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float32",
+      "gbps": 658.911945954687,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.012731000024359673,
+      "rows": 1024,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float32",
+      "gbps": 418.6908872921232,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.04007064999314025,
+      "rows": 2048,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float32",
+      "gbps": 815.4706492816531,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.020573660149239004,
+      "rows": 2048,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "cols": 2048,
+      "dtype": "float32",
+      "gbps": 196.4364115542398,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.3416314901551232,
+      "rows": 4096,
+      "shape": [
+        4096,
+        2048
+      ]
+    },
+    {
+      "cols": 2048,
+      "dtype": "float32",
+      "gbps": 200.12379803330109,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.33533674984937534,
+      "rows": 4096,
+      "shape": [
+        4096,
+        2048
+      ]
+    },
+    {
+      "cols": 256,
+      "dtype": "float16",
+      "gbps": 4.060293531379641,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.032281409949064255,
+      "rows": 128,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "cols": 256,
+      "dtype": "float16",
+      "gbps": 8.37319593062662,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.01565376005601138,
+      "rows": 128,
+      "shape": [
+        128,
+        256
+      ]
+    },
+    {
+      "cols": 257,
+      "dtype": "float16",
+      "gbps": 4.102277603325635,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.032075839990284294,
+      "rows": 128,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "cols": 257,
+      "dtype": "float16",
+      "gbps": 8.121376197845272,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.016202180122490972,
+      "rows": 128,
+      "shape": [
+        128,
+        257
+      ]
+    },
+    {
+      "cols": 512,
+      "dtype": "float16",
+      "gbps": 31.257724534811068,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.03354613989358768,
+      "rows": 512,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "cols": 512,
+      "dtype": "float16",
+      "gbps": 92.18023754221414,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.011375279864296317,
+      "rows": 512,
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float16",
+      "gbps": 132.42175030208767,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.03167382994433865,
+      "rows": 1024,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float16",
+      "gbps": 214.45409977825892,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.01955804997123778,
+      "rows": 1024,
+      "shape": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float16",
+      "gbps": 271.26652337521534,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.030923860031180084,
+      "rows": 2048,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "cols": 1024,
+      "dtype": "float16",
+      "gbps": 486.27807192558674,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.017250640084967017,
+      "rows": 2048,
+      "shape": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "cols": 2048,
+      "dtype": "float16",
+      "gbps": 927.6334638683584,
+      "impl": "triton",
+      "implementation": "triton",
+      "ms": 0.03617208014475182,
+      "rows": 4096,
+      "shape": [
+        4096,
+        2048
+      ]
+    },
+    {
+      "cols": 2048,
+      "dtype": "float16",
+      "gbps": 496.5827181897083,
+      "impl": "torch",
+      "implementation": "torch",
+      "ms": 0.06757068011211231,
+      "rows": 4096,
+      "shape": [
+        4096,
+        2048
+      ]
+    }
+  ]
+}

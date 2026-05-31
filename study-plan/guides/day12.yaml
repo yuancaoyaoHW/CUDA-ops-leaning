@@ -1,0 +1,78 @@
+day: 12
+
+tasks:
+  add_pytest:
+    summary: 为 rmsnorm_cuda_ext 添加 pytest 正确性和错误路径测试
+    steps:
+      - 创建 kernels/rmsnorm_cuda_ext/test_rmsnorm_cuda_ext.py
+      - 覆盖 batch、hidden size、fp32/fp16/bf16 输入
+      - 对比 CUDA extension 输出与 PyTorch rmsnorm 参考实现
+      - 添加非 contiguous、shape 不匹配、CPU tensor 等 TORCH_CHECK 负例
+      - 确认测试能在 extension 未 build 时给出清晰跳过或失败信息
+    done_when: pytest kernels/rmsnorm_cuda_ext/test_rmsnorm_cuda_ext.py -v 全部 PASS 或明确跳过不可用 dtype
+    time_minutes: 40
+    depends_on: []
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  add_benchmark:
+    summary: 为 rmsnorm_cuda_ext 添加 benchmark，测量不同 dtype 和 hidden size
+    steps:
+      - 创建 kernels/rmsnorm_cuda_ext/bench_rmsnorm_cuda_ext.py
+      - 覆盖 fp16、bf16、fp32，记录不支持 dtype 的原因
+      - 覆盖 hidden=[1024, 4096, 8192] 和多个 batch size
+      - 输出 cuda_ext_ms、torch_ms、speedup 和有效带宽
+      - 保存 benchmark 结果到可复查的文本或 json 文件
+    done_when: benchmark 脚本能输出 extension 与 PyTorch 的性能对比
+    time_minutes: 35
+    depends_on: [add_pytest]
+    refs:
+      - title: PyTorch benchmark utilities
+        url: https://pytorch.org/tutorials/recipes/recipes/benchmark.html
+
+  compare_triton_version:
+    summary: 对比 rmsnorm_cuda_ext 与 Triton 版 rmsnorm 的性能和工程成本
+    steps:
+      - 找到已有 Triton rmsnorm 实现和 benchmark 命令
+      - 在相同 shape、dtype、warmup 设置下运行 extension 和 Triton benchmark
+      - 对比 latency、GB/s、编译复杂度和可维护性
+      - 记录 extension 适合的场景与 Triton 适合的场景
+      - 将结论写入 kernels/rmsnorm_cuda_ext/README.md
+    done_when: README 包含 CUDA extension vs Triton 的数据表和结论
+    time_minutes: 35
+    depends_on: [add_benchmark]
+
+  add_dtype_dispatch:
+    summary: 梳理并实现 dtype dispatch，理解 C++ template 和半精度路径
+    steps:
+      - 在 C++ binding 或 CUDA 文件中整理 fp32/fp16/bf16 dispatch
+      - 用 AT_DISPATCH 或显式分支保持错误信息清晰
+      - 确认 accumulation dtype 是否使用 fp32
+      - 记录 C++ template、dtype dispatch 和 atomic 写法对比
+      - 写 5 道 smart pointer / RAII 复习题并附回答要点
+    done_when: dtype dispatch 行为明确，README 包含 C++ template/dtype dispatch/RAII drill 笔记
+    time_minutes: 35
+    depends_on: [add_pytest]
+    refs:
+      - title: PyTorch C++ extension dispatch
+        url: https://pytorch.org/tutorials/advanced/cpp_extension.html
+
+artifacts:
+  tests:
+    summary: rmsnorm_cuda_ext pytest 测试
+    done_when: kernels/rmsnorm_cuda_ext/test_rmsnorm_cuda_ext.py 存在且 pytest 通过
+    time_minutes: 0
+    depends_on: [add_pytest]
+  benchmark:
+    summary: rmsnorm_cuda_ext benchmark 和与 Triton 对比数据
+    done_when: benchmark 脚本能输出 PyTorch、CUDA extension 和 Triton 对比
+    time_minutes: 0
+    depends_on: [add_benchmark, compare_triton_version]
+  note:
+    summary: dtype dispatch、C++ template 和 RAII drill 笔记
+    done_when: README 包含 dtype dispatch 说明和 C++ drill
+    time_minutes: 0
+    depends_on: [compare_triton_version, add_dtype_dispatch]
+
+total_time_minutes: 145

@@ -1,0 +1,83 @@
+day: 14
+
+tasks:
+  operator_mock:
+    summary: 口头闭卷 mock Week 2 算子：fused_add_rmsnorm、swiglu、rope、kv_cache_append
+    steps:
+      - 不看代码讲清 fused_add_rmsnorm 的数据流和 fusion 收益
+      - 不看代码讲清 swiglu 的 gate/up 切分、SiLU 公式和 gelu 近似
+      - 不看代码讲清 RoPE 的旋转公式、sin/cos cache 和 in-place 权衡
+      - 不看代码讲清 kv_cache_append 的 contiguous 地址计算和 paged layout 差异
+      - 记录每个回答中卡住的概念和需要回补的数据
+    done_when: 能在 20 分钟内完成 4 个算子的闭卷讲解，并留下 mock 记录
+    time_minutes: 35
+    depends_on: []
+
+  cuda_extension_mock:
+    summary: 模拟面试讲解最小 PyTorch C++/CUDA extension build 流程
+    steps:
+      - 口头说明 setup.py、C++ binding、CUDA kernel、Python import 的关系
+      - 解释 TORCH_CHECK 应该覆盖哪些输入约束
+      - 解释 dtype dispatch、fp32 accumulation 和半精度支持方式
+      - 说明 WSL2 CUDA build 失败时的排查顺序
+      - 把回答整理成一段 2 分钟面试话术
+    done_when: 能清楚讲完 extension build/run/verify 流程，并写下 2 分钟回答稿
+    time_minutes: 25
+    depends_on: []
+
+  lru_or_queue_drill:
+    summary: 练习 LRU 或 queue 相关算法题，保持面试基础题手感
+    steps:
+      - 手写 LRUCache：哈希表 + 双向链表
+      - 说明 get/put 的 O(1) 复杂度来自哪里
+      - 补充一个 queue/monotonic queue 题目并写出核心思路
+      - 对照测试用例检查边界：容量 1、覆盖已有 key、淘汰尾部
+      - 记录错点和下次复习触发条件
+    done_when: 能在 20 分钟内手写 LRUCache，并讲清 queue 变体核心不变量
+    time_minutes: 25
+    depends_on: []
+
+  cpp_smart_pointer_review:
+    summary: 复习 C++ smart pointer、RAII 和 move 语义
+    steps:
+      - 写出 unique_ptr、shared_ptr、weak_ptr 的所有权差异
+      - 解释 RAII 如何管理 CUDA stream、event 或 device buffer
+      - 写出 move constructor 和 move assignment 的最小示例
+      - 说明 shared_ptr 循环引用问题和 weak_ptr 的作用
+      - 整理 5 道 smart pointer 面经题和回答要点
+    done_when: 能口头解释 smart pointer + RAII，并写出一个正确的 move-only wrapper 示例
+    time_minutes: 30
+    depends_on: []
+
+  star_metrics_entry:
+    summary: 为 Week 2 fusion/extension 工作写 STAR 项目经历，补齐 baseline 和指标
+    steps:
+      - "Situation: 大模型推理中 norm、activation、position encoding 和 KV cache 写入都是高频路径"
+      - "Task: 实现 Week 2 算子和最小 CUDA extension，并验证 correctness/performance"
+      - "Action: 填入 fused_add_rmsnorm、swiglu、rope、rmsnorm_cuda_ext、kv_cache_append 的实现和验证动作"
+      - "Result: 填入实际 speedup、GB/s、kernel 数减少、失败 case 和 badcase"
+      - 写入 docs/star-entries.md 或 Week 2 总结笔记
+    done_when: STAR 条目包含 baseline、metric、improvement、failure 和 badcase，不是空泛描述
+    time_minutes: 20
+    depends_on: [operator_mock, cuda_extension_mock]
+
+  panorama_table:
+    summary: 生成 reduction + norm + fusion + extension 全景表，统一记录 11 个算子的指标和面试 hook
+    steps:
+      - 列出 Week 1 和 Week 2 涉及的 reduction、norm、fusion、extension、KV layout 算子
+      - 为每个算子记录 kind、输入 shape、GB/s、arithmetic intensity、主要瓶颈
+      - 记录每个算子的 interview hook：mask、fusion、dispatch、cache、layout 等
+      - 标出数据缺失项，写明后续补测命令
+      - 将表格写入 docs/operator-panorama.md 或 Week 2 总结笔记
+    done_when: 全景表存在，覆盖 11 个算子，并明确每个算子的瓶颈和面试 hook
+    time_minutes: 35
+    depends_on: [operator_mock]
+
+artifacts:
+  mock:
+    summary: Week 2 阶段检 mock、drill、STAR 和全景表记录
+    done_when: 有闭卷 mock 记录、LRU/smart pointer drill 记录、STAR 条目和 operator 全景表
+    time_minutes: 0
+    depends_on: [operator_mock, cuda_extension_mock, lru_or_queue_drill, cpp_smart_pointer_review, star_metrics_entry, panorama_table]
+
+total_time_minutes: 170

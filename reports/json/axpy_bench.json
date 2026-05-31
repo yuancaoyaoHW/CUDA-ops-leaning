@@ -1,0 +1,98 @@
+{
+  "alpha": 0.5,
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "gbps": 232.78458383396764,
+  "op": "axpy",
+  "results": [
+    {
+      "dtype": "torch.float32",
+      "gbps": 0.3665020465965417,
+      "implementation": "triton",
+      "ms": 0.03352778003318235,
+      "shape": [
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 0.5028771777645902,
+      "implementation": "torch",
+      "ms": 0.024435390077997,
+      "shape": [
+        1024
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 1.5002898199892243,
+      "implementation": "triton",
+      "ms": 0.032761670008767396,
+      "shape": [
+        4096
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 1.6236480824991306,
+      "implementation": "torch",
+      "ms": 0.030272569856606424,
+      "shape": [
+        4096
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 24.717290084313245,
+      "implementation": "triton",
+      "ms": 0.03181708016199991,
+      "shape": [
+        65536
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 27.25663939760758,
+      "implementation": "torch",
+      "ms": 0.02885285997763276,
+      "shape": [
+        65536
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 218.31241625994005,
+      "implementation": "triton",
+      "ms": 0.057637179852463305,
+      "shape": [
+        1048576
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 566.0576245210164,
+      "implementation": "torch",
+      "ms": 0.02222903014626354,
+      "shape": [
+        1048576
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 232.78458383396764,
+      "implementation": "triton",
+      "ms": 0.8648622201872058,
+      "shape": [
+        16777216
+      ]
+    },
+    {
+      "dtype": "torch.float32",
+      "gbps": 138.36825349963163,
+      "implementation": "torch",
+      "ms": 1.4550056599546224,
+      "shape": [
+        16777216
+      ]
+    }
+  ]
+}
