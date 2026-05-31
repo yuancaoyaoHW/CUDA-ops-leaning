@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import json
+import mimetypes
 import sys
 import threading
 import webbrowser
@@ -24,8 +25,9 @@ BASE_DIR = Path(__file__).parent
 PROGRESS_FILE = BASE_DIR / "progress.yaml"
 OUTPUT_HTML = BASE_DIR / "dashboard.html"
 OUTPUT_FILE = OUTPUT_HTML  # alias for test compatibility
-CSS_FILE = BASE_DIR / "dashboard.css"
-JS_FILE = BASE_DIR / "dashboard.js"
+STATIC_DIR = BASE_DIR / "static"
+STATIC_INDEX = STATIC_DIR / "index.html"
+GUIDES_DIR = BASE_DIR / "guides"
 TAG_ORDER = ["kernel", "framework", "serving", "perf", "quant", "docs", "interview"]
 STATUS_OPTIONS = ["not_started", "in_progress", "done", "blocked", "skipped"]
 OPERATOR_STATUS_OPTIONS = [
@@ -39,8 +41,8 @@ OPERATOR_STATUS_OPTIONS = [
 LIBRARY_STATUS_OPTIONS = ["not_started", "in_progress", "complete", "blocked"]
 TEXT_DAY_FIELDS = ["status", "date", "verification", "weaknesses", "next_fix", "notes"]
 INT_DAY_FIELDS = ["daily_check", "weekly_check_score", "stage_check_score"]
+SAFE_ORIGINS = {"http://127.0.0.1", "http://localhost"}
 
-# --- Web-writable field whitelists (§5: only user-note fields from web) ---
 USER_NOTE_FIELDS_DAY = {
     "daily_check",
     "date",
@@ -56,15 +58,19 @@ USER_NOTE_FIELDS_OPERATOR = {"notes"}
 
 
 def _filter_user_fields(payload: dict, allowed: set) -> dict:
-    """Drop any payload keys not in the allowed whitelist."""
     return {k: v for k, v in payload.items() if k in allowed}
-
-
-SAFE_ORIGINS = {"http://127.0.0.1", "http://localhost"}
 
 
 def load_progress() -> dict[str, Any]:
     with open(PROGRESS_FILE, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def load_guide(day_num: int) -> dict[str, Any] | None:
+    guide_file = GUIDES_DIR / f"day{day_num:02d}.yaml"
+    if not guide_file.exists():
+        return None
+    with open(guide_file, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -131,6 +137,10 @@ def enrich_day(day: dict[str, Any]) -> dict[str, Any]:
     enriched["artifact_done"] = artifact_done
     enriched["artifact_total"] = artifact_total
     enriched["completion_pct"] = pct(task_done + artifact_done, task_total + artifact_total)
+    if "num" in enriched:
+        guide = load_guide(enriched["num"])
+        if guide:
+            enriched["guide"] = guide
     return enriched
 
 
@@ -272,6 +282,7 @@ def get_api_data() -> dict[str, Any]:
         "summary": summary(days),
         "current_day": current_day(days),
         "risks": risks(raw),
+        "references": raw.get("references", []),
         "options": {
             "day_statuses": STATUS_OPTIONS,
             "operator_statuses": OPERATOR_STATUS_OPTIONS,
@@ -287,7 +298,6 @@ def update_day(day_num: int, updates: dict[str, Any]) -> bool:
     if week_key not in raw or day_key not in raw[week_key]:
         return False
 
-    # Filter to user-note fields only; artifact/status/star fields are dropped.
     updates = _filter_user_fields(updates, USER_NOTE_FIELDS_DAY)
 
     day_data = raw[week_key][day_key]
@@ -298,7 +308,6 @@ def update_day(day_num: int, updates: dict[str, Any]) -> bool:
         if field in updates and updates[field] not in ("", None):
             day_data[field] = int(updates[field])
 
-    # Only tasks are web-writable as a group-bool dict; artifacts are verify-owned.
     if "tasks" in updates:
         group = day_data.get("tasks") or {}
         for key, value in updates["tasks"].items():
@@ -316,7 +325,6 @@ def update_operator(name: str, updates: dict[str, Any]) -> bool:
     if name not in operators:
         return False
 
-    # Filter to user-note fields only; status/artifacts are verify-owned.
     updates = _filter_user_fields(updates, USER_NOTE_FIELDS_OPERATOR)
 
     operator = operators[name]
@@ -352,6 +360,48 @@ def update_gpu_library(name: str, updates: dict[str, Any]) -> bool:
     return True
 
 
+def update_reference(payload: dict[str, Any]) -> bool:
+    import uuid
+
+    raw = load_progress()
+    refs: list[dict[str, Any]] = raw.get("references", [])
+    action = payload.get("action", "add")
+
+    if action == "add":
+        ref = {
+            "id": str(uuid.uuid4())[:8],
+            "title": str(payload["title"]),
+            "url": str(payload["url"]),
+            "category": str(payload.get("category", "other")),
+        }
+        if payload.get("notes"):
+            ref["notes"] = str(payload["notes"])
+        refs.append(ref)
+    elif action == "update":
+        ref_id = str(payload["id"])
+        for ref in refs:
+            if ref.get("id") == ref_id:
+                ref["title"] = str(payload.get("title", ref["title"]))
+                ref["url"] = str(payload.get("url", ref["url"]))
+                ref["category"] = str(payload.get("category", ref.get("category", "other")))
+                if payload.get("notes"):
+                    ref["notes"] = str(payload["notes"])
+                elif "notes" in ref and not payload.get("notes"):
+                    ref.pop("notes", None)
+                break
+        else:
+            return False
+    elif action == "delete":
+        ref_id = str(payload["id"])
+        refs = [r for r in refs if r.get("id") != ref_id]
+    else:
+        raise ValueError(f"unknown reference action: {action}")
+
+    raw["references"] = refs
+    save_progress(raw)
+    return True
+
+
 def cors_origin(origin: str | None) -> str | None:
     if not origin:
         return None
@@ -375,6 +425,16 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: Any, code: int = 2
     handler.wfile.write(body)
 
 
+def file_response(handler: SimpleHTTPRequestHandler, path: Path) -> None:
+    body = path.read_bytes()
+    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    handler.send_response(200)
+    handler.send_header("Content-Type", content_type)
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
@@ -388,13 +448,18 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             json_response(self, get_api_data())
             return
         if parsed.path in ("/", "/dashboard.html"):
-            body = render_dashboard(embed_data=False).encode("utf-8")
+            body = render_dashboard().encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
             return
+        if parsed.path.startswith("/assets/"):
+            asset = STATIC_DIR / parsed.path.lstrip("/")
+            if asset.exists() and asset.is_file():
+                file_response(self, asset)
+                return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -408,6 +473,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 ok = update_operator(str(payload["operator"]), payload["updates"])
             elif parsed.path == "/api/library":
                 ok = update_gpu_library(str(payload["library"]), payload["updates"])
+            elif parsed.path == "/api/reference":
+                ok = update_reference(payload)
             else:
                 json_response(self, {"ok": False, "error": "not found"}, code=404)
                 return
@@ -426,57 +493,29 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-def render_dashboard(embed_data: bool = True) -> str:
-    data = get_api_data()
-    title = html.escape(data.get("meta", {}).get("title", "Study Plan"))
-    initial_data = ""
-    if embed_data:
-        payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-        initial_data = f'<script type="application/json" id="initial-data">{payload}</script>'
+def render_dashboard(embed_data: bool = False) -> str:
+    if STATIC_INDEX.exists():
+        return STATIC_INDEX.read_text(encoding="utf-8")
 
+    title = html.escape(load_progress().get("meta", {}).get("title", "Study Plan"))
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f6f8fb">
 <title>{title}</title>
-<link rel="stylesheet" href="dashboard.css">
+<style>
+body {{ margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #f8fafc; color: #172033; }}
+main {{ max-width: 760px; margin: 80px auto; padding: 24px; background: white; border: 1px solid #dbe3ee; border-radius: 8px; }}
+code {{ background: #eef2f7; border-radius: 4px; padding: 2px 4px; }}
+</style>
 </head>
 <body>
-<a class="skip-link" href="#app">Skip To Dashboard</a>
 <main>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">LLM Kernel Lab</p>
-      <h1>{title}</h1>
-      <p class="subtitle">本地可编辑进度面板。启动 <code>python study-plan/dashboard.py --serve</code> 后可保存到 <code>progress.yaml</code>。</p>
-    </div>
-    <div class="topbar-actions">
-      <button type="button" class="ghost" id="refresh-button">Refresh Data</button>
-    </div>
-  </header>
-  <div id="app" tabindex="-1">
-    <section class="empty-state" aria-live="polite">
-      <h2>Loading Dashboard…</h2>
-      <p>Reading progress data from the local workspace.</p>
-    </section>
-  </div>
+  <h1>{title}</h1>
+  <p>The React dashboard has not been built yet.</p>
+  <p>Run <code>cd study-plan/frontend && npm install && npm run build</code>, then start <code>python study-plan/dashboard.py --serve</code>.</p>
 </main>
-<div
-  class="drawer"
-  id="drawer"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="editor-title"
-  aria-describedby="editor-help"
-  hidden
->
-  <form class="editor" id="editor" novalidate></form>
-</div>
-<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-{initial_data}
-<script src="dashboard.js"></script>
 </body>
 </html>
 """
@@ -484,12 +523,11 @@ def render_dashboard(embed_data: bool = True) -> str:
 
 def _get_output_path() -> Path:
     """Return the output path, respecting monkeypatch overrides."""
-    # When tests monkeypatch OUTPUT_FILE on the module object, globals() reflects it.
     return globals().get("OUTPUT_FILE") or OUTPUT_HTML
 
 
 def build() -> None:
-    html_text = render_dashboard(embed_data=True)
+    html_text = render_dashboard()
     out_path = _get_output_path()
     out_path.write_text(html_text, encoding="utf-8")
     print(f"Generated {out_path}")

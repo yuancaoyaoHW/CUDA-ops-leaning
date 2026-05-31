@@ -1,0 +1,66 @@
+day: 2
+
+tasks:
+  write_reference:
+    summary: 用 PyTorch 实现 row_softmax 参考版本，作为正确性基准
+    steps:
+      - 创建 kernels/softmax/reference.py
+      - 实现 row_softmax(x) 函数，输入 (M, N) tensor，沿 dim=-1 做 softmax
+      - 处理数值稳定性：先减去每行最大值
+      - 添加 __main__ 块验证与 torch.softmax 结果一致（atol=1e-6）
+    done_when: python kernels/softmax/reference.py 运行通过，输出 "PASS"
+    time_minutes: 25
+    depends_on: []
+    refs:
+      - title: PyTorch softmax 源码
+        url: https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/SoftMax.cpp
+      - title: Online Softmax 论文
+        url: https://arxiv.org/abs/1805.02867
+
+  write_triton_skeleton:
+    summary: 用 Triton 实现 row_softmax kernel 骨架
+    steps:
+      - 创建 kernels/softmax/triton_softmax.py
+      - 定义 @triton.jit kernel 函数签名（input_ptr, output_ptr, n_cols, BLOCK_SIZE）
+      - 实现 row-wise 并行：每个 program 处理一行
+      - 实现 load → max → subtract → exp → sum → divide → store 流程
+      - 用 tl.where 处理 BLOCK_SIZE > n_cols 的 padding
+      - 添加 wrapper 函数分配输出 tensor 并 launch kernel
+    done_when: python kernels/softmax/triton_softmax.py 运行通过，与 reference 结果一致（atol=1e-5）
+    time_minutes: 40
+    depends_on: [write_reference]
+    refs:
+      - title: Triton softmax 教程
+        url: https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html
+      - title: Triton 编程模型
+        url: https://triton-lang.org/main/programming-guide/chapter-1/introduction.html
+
+  record_addressing:
+    summary: 记录 Triton kernel 的寻址模式和 BLOCK_SIZE 选择逻辑
+    steps:
+      - 在 kernels/softmax/README.md 中记录
+      - 画出 grid/block 映射关系（哪个 program 对应哪行）
+      - 解释 BLOCK_SIZE 如何影响 shared memory 和 occupancy
+      - 记录为什么用 tl.where 做 mask 而不是 if 分支
+    done_when: kernels/softmax/README.md 存在且包含寻址模式说明
+    time_minutes: 20
+    depends_on: [write_triton_skeleton]
+
+artifacts:
+  reference:
+    summary: PyTorch 参考实现文件
+    done_when: kernels/softmax/reference.py 存在且可运行
+    time_minutes: 0
+    depends_on: [write_reference]
+  implementation:
+    summary: Triton kernel 实现文件
+    done_when: kernels/softmax/triton_softmax.py 存在且可运行
+    time_minutes: 0
+    depends_on: [write_triton_skeleton]
+  note:
+    summary: 寻址模式笔记
+    done_when: kernels/softmax/README.md 存在
+    time_minutes: 0
+    depends_on: [record_addressing]
+
+total_time_minutes: 85

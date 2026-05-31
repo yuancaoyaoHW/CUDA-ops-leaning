@@ -185,64 +185,6 @@ def test_get_api_data_exposes_editable_sections(tmp_path, monkeypatch) -> None:
     assert "cutlass" in api_data["gpu_libraries"]
 
 
-def test_render_dashboard_uses_external_assets_and_accessible_dialog(tmp_path, monkeypatch) -> None:
-    dashboard = load_dashboard_module()
-    progress_file = tmp_path / "progress.yaml"
-    write_sample_progress(progress_file)
-    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
-
-    html = dashboard.render_dashboard(embed_data=False)
-
-    assert 'href="dashboard.css"' in html
-    assert 'src="dashboard.js"' in html
-    assert 'role="dialog"' in html
-    assert 'aria-modal="true"' in html
-    assert 'id="initial-data"' not in html
-
-
-def test_dashboard_build_includes_operator_and_phase(tmp_path, monkeypatch):
-    """--build should render operator/phase fields into HTML (through embedded JSON)."""
-    dashboard = load_dashboard_module()
-    progress_file = tmp_path / "progress.yaml"
-    fixture = Path(__file__).resolve().parent / "fixtures" / "study_plan" / "mini_progress.yaml"
-    progress_file.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
-    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
-
-    out = tmp_path / "dashboard_out.html"
-    monkeypatch.setattr(dashboard, "OUTPUT_FILE", out)
-    monkeypatch.setattr(dashboard, "OUTPUT_HTML", out)
-
-    dashboard.build_static_dashboard()
-    html_text = out.read_text(encoding="utf-8")
-    assert "row_softmax" in html_text
-    assert "reference" in html_text  # phase name appears in JSON via day.phase
-
-
-def test_dashboard_build_uses_verify_truth(tmp_path, monkeypatch):
-    """Fixture has row_softmax artifacts all false; after creating a real impl file,
-    build should render reference=true (embedded JSON)."""
-    dashboard = load_dashboard_module()
-    progress_file = tmp_path / "progress.yaml"
-    fixture = Path(__file__).resolve().parent / "fixtures" / "study_plan" / "mini_progress.yaml"
-    progress_file.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
-    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
-
-    (tmp_path / "kernels" / "triton" / "row_softmax").mkdir(parents=True)
-    (tmp_path / "kernels" / "triton" / "row_softmax" / "row_softmax.py").write_text(
-        "import torch\n\ndef pytorch_reference(x): return torch.softmax(x, -1)\n"
-    )
-    monkeypatch.chdir(tmp_path)
-
-    out = tmp_path / "dashboard_out.html"
-    monkeypatch.setattr(dashboard, "OUTPUT_FILE", out)
-    monkeypatch.setattr(dashboard, "OUTPUT_HTML", out)
-
-    dashboard.build_static_dashboard()
-    html_text = out.read_text(encoding="utf-8")
-    # The dashboard embeds artifacts as JSON; after _apply_verify, reference becomes true.
-    assert '"reference": true' in html_text
-
-
 def test_update_day_rejects_artifact_fields(tmp_path, monkeypatch):
     """artifact / status / star_filled fields must be rejected (silently dropped) by update_day."""
     dashboard = load_dashboard_module()
@@ -289,3 +231,97 @@ def test_update_operator_artifact_rejected(tmp_path, monkeypatch):
     assert op["notes"] == "ok"
     assert op["status"] == "not_started"
     assert op["artifacts"]["reference"] is False
+
+
+def test_render_dashboard_uses_react_static_index(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text(
+        '<!doctype html><div id="root"></div><script type="module" src="/assets/index.js"></script>',
+        encoding="utf-8",
+    )
+    write_sample_progress(progress_file)
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+    monkeypatch.setattr(dashboard, "STATIC_DIR", static_dir)
+    monkeypatch.setattr(dashboard, "STATIC_INDEX", static_dir / "index.html")
+
+    html = dashboard.render_dashboard()
+
+    assert 'id="root"' in html
+    assert "/assets/index.js" in html
+    assert 'id="initial-data"' not in html
+
+
+def test_load_guide_returns_none_when_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    result = dashboard.load_guide(1)
+
+    assert result is None
+
+
+def test_load_guide_returns_parsed_yaml(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    (guides_dir / "day01.yaml").write_text(
+        "day: 1\ntasks:\n  audit:\n    summary: Check files\n    steps:\n      - list dir\n    done_when: audit.md exists\n    time_minutes: 20\n    depends_on: []\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    result = dashboard.load_guide(1)
+
+    assert result is not None
+    assert result["day"] == 1
+    assert result["tasks"]["audit"]["summary"] == "Check files"
+    assert result["tasks"]["audit"]["steps"] == ["list dir"]
+    assert result["tasks"]["audit"]["time_minutes"] == 20
+
+
+def test_enrich_day_merges_guide(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    (guides_dir / "day01.yaml").write_text(
+        "day: 1\ntasks:\n  audit:\n    summary: Check files\n    steps:\n      - list dir\n    done_when: audit.md exists\n    time_minutes: 20\n    depends_on: []\ntotal_time_minutes: 20\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    day = {"num": 1, "week": 1, "tasks": {"audit": False}, "artifacts": {}}
+    enriched = dashboard.enrich_day(day)
+
+    assert "guide" in enriched
+    assert enriched["guide"]["tasks"]["audit"]["summary"] == "Check files"
+    assert enriched["guide"]["total_time_minutes"] == 20
+
+
+def test_enrich_day_no_guide_field_when_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    guides_dir = tmp_path / "guides"
+    monkeypatch.setattr(dashboard, "GUIDES_DIR", guides_dir)
+
+    day = {"num": 1, "week": 1, "tasks": {"audit": False}, "artifacts": {}}
+    enriched = dashboard.enrich_day(day)
+
+    assert "guide" not in enriched
+
+
+def test_render_dashboard_has_clear_fallback_when_static_index_missing(tmp_path, monkeypatch) -> None:
+    dashboard = load_dashboard_module()
+    progress_file = tmp_path / "progress.yaml"
+    static_dir = tmp_path / "static"
+    write_sample_progress(progress_file)
+    monkeypatch.setattr(dashboard, "PROGRESS_FILE", progress_file)
+    monkeypatch.setattr(dashboard, "STATIC_DIR", static_dir)
+    monkeypatch.setattr(dashboard, "STATIC_INDEX", static_dir / "index.html")
+
+    html = dashboard.render_dashboard()
+
+    assert "React dashboard has not been built" in html
+    assert "npm run build" in html

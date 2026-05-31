@@ -1,0 +1,55 @@
+day: 5
+
+tasks:
+  isolate_one_kernel:
+    summary: 隔离单次 softmax kernel 调用，准备 profiling
+    steps:
+      - 创建 kernels/softmax/profile_softmax.py
+      - 固定输入尺寸（如 M=2048, N=4096）和随机种子
+      - 只调用一次 kernel（避免 warmup 干扰 profile）
+      - 添加 torch.cuda.synchronize() 确保 kernel 完成
+    done_when: python kernels/softmax/profile_softmax.py 运行一次 kernel 并退出
+    time_minutes: 15
+    depends_on: []
+
+  run_ncu:
+    summary: 用 Nsight Compute 采集 softmax kernel 的性能数据
+    steps:
+      - 运行 ncu --set full -o softmax_profile python kernels/softmax/profile_softmax.py
+      - 如果 WSL2 限制硬件计数器，尝试 ncu --set basic
+      - 查看关键指标：sm__throughput, dram__throughput, l1tex__throughput
+      - 记录 achieved occupancy 和 memory throughput
+    done_when: 有 .ncu-rep 文件或文字记录了关键性能指标
+    time_minutes: 30
+    depends_on: [isolate_one_kernel]
+    refs:
+      - title: NCU Metrics 参考
+        url: https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html
+      - title: Roofline 分析方法
+        url: https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#roofline-charts
+
+  write_bottleneck_note:
+    summary: 分析 profile 数据，写出瓶颈分析笔记
+    steps:
+      - 判断 kernel 是 compute-bound 还是 memory-bound
+      - 计算 arithmetic intensity = FLOPs / bytes_accessed
+      - 对比 roofline 模型确定瓶颈
+      - 列出可能的优化方向（如 vectorized load, shared memory）
+      - 写入 kernels/softmax/PROFILE_NOTES.md
+    done_when: PROFILE_NOTES.md 存在且包含瓶颈分析和优化建议
+    time_minutes: 25
+    depends_on: [run_ncu]
+
+artifacts:
+  profile:
+    summary: profile 数据文件
+    done_when: 有 .ncu-rep 文件或等效的性能数据记录
+    time_minutes: 0
+    depends_on: [run_ncu]
+  note:
+    summary: 瓶颈分析笔记
+    done_when: kernels/softmax/PROFILE_NOTES.md 存在
+    time_minutes: 0
+    depends_on: [write_bottleneck_note]
+
+total_time_minutes: 70

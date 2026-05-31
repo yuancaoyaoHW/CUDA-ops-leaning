@@ -1551,3 +1551,244 @@ week8:
     star_filled: false
     algo_drill_done: false
     cpp_drill_done: false
+references:
+- id: fec3c483
+  title: Online normalizer calculation for softmax (Milakov 2018)
+  url: papers/01_online_softmax_milakov_2018.pdf
+  category: paper
+  notes: row_softmax 数值稳定性
+- id: b810b74e
+  title: 'ZeRO: Memory Optimizations (Rajbhandari 2020)'
+  url: papers/02_zero_rajbhandari_2020.pdf
+  category: paper
+  notes: fused RMSNorm 背景
+- id: eec2d0a3
+  title: FlashAttention (Dao 2022)
+  url: papers/03_flashattention_dao_2022.pdf
+  category: paper
+  notes: attention kernel 核心
+- id: 0ee1c080
+  title: FlashAttention-2 (Dao 2023)
+  url: papers/04_flashattention2_dao_2023.pdf
+  category: paper
+  notes: 'v2 改进: better parallelism'
+- id: fd518bfa
+  title: PagedAttention / vLLM (Kwon 2023)
+  url: papers/06_pagedattention_vllm_kwon_2023.pdf
+  category: paper
+  notes: vLLM/PagedAttention
+- id: 5fc19b87
+  title: 'Orca: Distributed Serving (Yu 2022)'
+  url: papers/07_orca_yu_2022.pdf
+  category: paper
+  notes: continuous batching
+- id: '55190195'
+  title: Speculative Decoding (Leviathan 2023)
+  url: papers/08_speculative_decoding_leviathan_2023.pdf
+  category: paper
+  notes: speculative decoding
+- id: 84ecbf5c
+  title: Staged Speculative Decoding (Spector 2023)
+  url: papers/09_staged_speculative_decoding_spector_2023.pdf
+  category: paper
+  notes: staged spec decode
+- id: 0a8440cc
+  title: SGLang (Zheng 2023)
+  url: papers/10_sglang_zheng_2023.pdf
+  category: paper
+  notes: RadixAttention
+- id: 054ebdd6
+  title: 'Mooncake: KVCache Disaggregated (2024)'
+  url: papers/11_mooncake_kvcache_disaggregated_2024.pdf
+  category: paper
+  notes: 小红书 external KV Cache
+- id: 6ddd9b99
+  title: Ring Attention (Liu 2023)
+  url: papers/12_ring_attention_liu_2023.pdf
+  category: paper
+  notes: context parallelism
+- id: 3a61ca26
+  title: GPTQ (Frantar 2023)
+  url: papers/14_gptq_frantar_2023.pdf
+  category: paper
+  notes: GPTQ 量化
+- id: 9a6bcb46
+  title: AWQ (Lin 2023)
+  url: papers/15_awq_lin_2023.pdf
+  category: paper
+  notes: AWQ 量化
+- id: 0846722d
+  title: FP8 Formats (Micikevicius 2022)
+  url: papers/16_fp8_formats_micikevicius_2022.pdf
+  category: paper
+  notes: FP8 格式
+- id: f729277a
+  title: DeepSeek-V3 (2024)
+  url: papers/17_deepseek_v3_2024.pdf
+  category: paper
+  notes: MoE + FP8 训练
+- id: 73a154af
+  title: Attention Is All You Need (Vaswani 2017)
+  url: papers/18_attention_is_all_you_need_2017.pdf
+  category: paper
+  notes: Transformer 基础
+- id: dd9625e6
+  title: RoFormer / RoPE (Su 2021)
+  url: papers/19_roformer_rope_su_2021.pdf
+  category: paper
+  notes: Rotary Position Embedding
+- id: 7d44d198
+  title: GQA (Ainslie 2023)
+  url: papers/20_gqa_ainslie_2023.pdf
+  category: paper
+  notes: GQA/MQA
+- id: 04435de1
+  title: LoRA (Hu 2021)
+  url: papers/21_lora_hu_2021.pdf
+  category: paper
+  notes: Low-Rank Adaptation
+- id: 99402d57
+  title: QLoRA (Dettmers 2023)
+  url: papers/22_qlora_dettmers_2023.pdf
+  category: paper
+  notes: Efficient Finetuning of Quantized LLMs
+- id: '29954487'
+  title: openai/triton
+  url: https://github.com/openai/triton
+  category: repo
+  notes: Triton 编译器源码 + tutorials (W1-W4)
+- id: 573fe5e2
+  title: NVIDIA/cutlass
+  url: https://github.com/NVIDIA/cutlass
+  category: repo
+  notes: CUTLASS GEMM 库 (W3)
+- id: cbf7a8cf
+  title: leimao/CUDA-Reduction
+  url: https://github.com/leimao/CUDA-Reduction
+  category: repo
+  notes: CUDA reduction 优化参考 (W1)
+- id: e967109f
+  title: leimao/CUDA-GEMM-Optimization
+  url: https://github.com/leimao/CUDA-GEMM-Optimization
+  category: repo
+  notes: GEMM 优化 V00-V07 (W3)
+- id: b57fa917
+  title: vllm-project/vllm
+  url: https://github.com/vllm-project/vllm
+  category: repo
+  notes: vLLM 推理框架源码 (W5-W6)
+- id: da7f7ba9
+  title: sgl-project/sglang
+  url: https://github.com/sgl-project/sglang
+  category: repo
+  notes: SGLang 框架源码 (W6)
+- id: 716ed96b
+  title: NVIDIA/TensorRT-LLM
+  url: https://github.com/NVIDIA/TensorRT-LLM
+  category: repo
+  notes: TensorRT-LLM 源码 (W6)
+- id: 01535849
+  title: Dao-AILab/flash-attention
+  url: https://github.com/Dao-AILab/flash-attention
+  category: repo
+  notes: FlashAttention 官方实现 (W4)
+- id: 398c17fd
+  title: IST-DASLab/gptq
+  url: https://github.com/IST-DASLab/gptq
+  category: repo
+  notes: GPTQ 官方实现 (W7)
+- id: e34ab5f5
+  title: mit-han-lab/llm-awq
+  url: https://github.com/mit-han-lab/llm-awq
+  category: repo
+  notes: AWQ 官方实现 (W7)
+- id: bb7c53db
+  title: TimDettmers/bitsandbytes
+  url: https://github.com/TimDettmers/bitsandbytes
+  category: repo
+  notes: QLoRA/量化工具 (W7)
+- id: 4a523473
+  title: kvcache-ai/Mooncake
+  url: https://github.com/kvcache-ai/Mooncake
+  category: repo
+  notes: 小红书 Mooncake 开源实现
+- id: c3d7d99c
+  title: Triton Tutorials (fused softmax, matmul, flash attention, layer norm)
+  url: https://triton-lang.org/main/getting-started/tutorials/
+  category: docs
+  notes: 算子实现参考 (W1-W4)
+- id: 5a0e0d60
+  title: NVIDIA CUDA C Programming Guide
+  url: https://docs.nvidia.com/cuda/cuda-c-programming-guide/
+  category: docs
+  notes: CUDA 编程基础 (W1-W3)
+- id: 2229fd8e
+  title: NVIDIA Nsight Compute Documentation
+  url: https://docs.nvidia.com/nsight-compute/
+  category: docs
+  notes: kernel profiling (W1-W4)
+- id: 81356c03
+  title: NVIDIA Nsight Systems Documentation
+  url: https://docs.nvidia.com/nsight-systems/
+  category: docs
+  notes: system profiling (W1-W4)
+- id: 49618d62
+  title: CUTLASS Documentation
+  url: https://github.com/NVIDIA/cutlass/blob/main/media/docs/fundamental_types.md
+  category: docs
+  notes: GEMM 设计 (W3)
+- id: 5c20e314
+  title: PyTorch CUDA Extension Tutorial
+  url: https://pytorch.org/tutorials/advanced/cpp_extension.html
+  category: docs
+  notes: C++/CUDA extension (W2)
+- id: 932c928a
+  title: vLLM Documentation
+  url: https://docs.vllm.ai/
+  category: docs
+  notes: 框架使用 (W5-W6)
+- id: aa4946d3
+  title: SGLang Documentation
+  url: https://sgl-project.github.io/
+  category: docs
+  notes: 框架使用 (W6)
+- id: 6a0a05df
+  title: FlashAttention CUDA Kernel Line by Line (Stephen Diehl)
+  url: https://stephendiehl.com/posts/cuda_attention/
+  category: blog
+  notes: FlashAttention 实现细节
+- id: b4ed373b
+  title: Inside vLLM (Aleksa Gordić)
+  url: https://www.youtube.com/watch?v=80bIUggRJf4
+  category: blog
+  notes: vLLM 架构解析
+- id: a9161fc2
+  title: Flash-Decoding for long-context (Tri Dao)
+  url: https://crfm.stanford.edu/2023/10/12/flashdecoding.html
+  category: blog
+  notes: FlashDecoding
+- id: 666dd0a1
+  title: How continuous batching enables 23x throughput (Anyscale)
+  url: https://www.anyscale.com/blog/continuous-batching-llm-inference
+  category: blog
+  notes: continuous batching
+- id: 9d3eb6af
+  title: SGLang Blog (LMSYS)
+  url: https://lmsys.org/blog/
+  category: blog
+  notes: SGLang 技术博客
+- id: 220f8b83
+  title: 小红书技术博客
+  url: https://tech.xiaohongshu.com/
+  category: blog
+  notes: 大模型推理加速实践
+- id: e0264d7b
+  title: 美团技术博客
+  url: https://tech.meituan.com/
+  category: blog
+  notes: 大模型推理优化实践
+- id: ff93c71c
+  title: 腾讯云开发者社区
+  url: https://cloud.tencent.com/developer/
+  category: blog
+  notes: 腾讯混元推理加速

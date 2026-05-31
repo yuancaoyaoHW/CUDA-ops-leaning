@@ -1,0 +1,68 @@
+day: 7
+
+tasks:
+  handwrite_softmax:
+    summary: 手写 softmax 公式和 kernel 伪代码（纸笔或白板）
+    steps:
+      - 写出 softmax 数学公式：softmax(x_i) = exp(x_i - max) / sum(exp(x_j - max))
+      - 写出 online softmax 的递推公式
+      - 画出 Triton kernel 的伪代码（load, max, sub, exp, sum, div, store）
+      - 标注每步的数据依赖关系
+    done_when: 能在 5 分钟内不看资料写出完整的 kernel 伪代码
+    time_minutes: 15
+    depends_on: []
+
+  oral_mock:
+    summary: 模拟面试口头回答 softmax 相关问题
+    steps:
+      - 问题1：softmax 为什么要减去 max？（数值稳定性）
+      - 问题2：你的 Triton kernel 是 memory-bound 还是 compute-bound？为什么？
+      - 问题3：BLOCK_SIZE 怎么选？太大/太小分别有什么问题？
+      - 问题4：如果 N 很大（超过一个 block 能处理的），怎么办？
+      - 录音或写下回答，检查是否清晰、有数据支撑
+    done_when: 能流畅回答以上 4 个问题，每个回答 < 2 分钟
+    time_minutes: 25
+    depends_on: [handwrite_softmax]
+
+  topk_heap_drill:
+    summary: 练习 TopK 堆排序算法（面试高频题）
+    steps:
+      - 实现 min-heap 版本的 topk（O(n log k)）
+      - 实现 quickselect 版本的 topk（O(n) 平均）
+      - 对比两种方法的时间复杂度和适用场景
+      - 手写一遍 heap 的 sift_down 操作
+    done_when: 能在 15 分钟内手写出正确的 topk 实现
+    time_minutes: 25
+    depends_on: []
+
+  cpp_raii_move_review:
+    summary: 复习 C++ RAII 和 move 语义（面试基础）
+    steps:
+      - 写出 RAII 的定义和典型例子（unique_ptr, lock_guard）
+      - 解释 move 语义解决了什么问题（避免深拷贝）
+      - 写出 Rule of Five 的五个特殊成员函数
+      - 写一个简单的 RAII wrapper 类示例
+    done_when: 能口头解释 RAII + move 语义，并写出示例代码
+    time_minutes: 25
+    depends_on: []
+
+  star_metrics_entry:
+    summary: 为 softmax 项目写一条 STAR 格式的项目经历
+    steps:
+      - "Situation: 大模型推理中 softmax 是高频算子，PyTorch 默认实现未充分利用 GPU 带宽"
+      - "Task: 实现高性能 Triton softmax kernel 并验证性能"
+      - "Action: 实现 kernel、编写测试、benchmark、profile 分析"
+      - "Result: 填入实际的 speedup 和带宽利用率数据"
+      - 写入 docs/star-entries.md
+    done_when: docs/star-entries.md 存在且有 softmax 项目的 STAR 条目
+    time_minutes: 15
+    depends_on: [oral_mock]
+
+artifacts:
+  mock:
+    summary: 模拟面试记录
+    done_when: 有口头回答的文字记录
+    time_minutes: 0
+    depends_on: [oral_mock]
+
+total_time_minutes: 105
