@@ -348,3 +348,7 @@ Speculative decoding 用一个 draft 模型先生成 k 个候选 token, 再用 t
 13. **可信 benchmark 需要什么输入?** 真实或近似的 prompt/output length 分布和 arrival process。
 14. **TTFT 排查先拆什么?** queue time, prefill time, KV transfer time, first decode time。
 15. **Serving 优化如何验证?** 对比 baseline, 固定变量, 看 TTFT/TPOT/throughput/p99/质量/稳定性。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

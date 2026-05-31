@@ -346,3 +346,7 @@ capacity = ceil(tokens * top_k / num_experts * capacity_factor)
 13. BPE: 反复合并最高频相邻 pair 形成子词。
 14. Vocab tradeoff: 大 vocab 序列短但 LM head 贵, 小 vocab 相反。
 15. MoE capacity factor: expert 容量倍率, 权衡 drop 风险和计算浪费。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

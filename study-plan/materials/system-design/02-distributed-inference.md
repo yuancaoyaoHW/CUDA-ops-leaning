@@ -348,3 +348,7 @@ decode_slots = qps * avg_output_tokens * tpot
 13. Q: Ring attention 解决什么？ A: 长上下文 attention 和 KV/activation 单卡压力。
 14. Q: Spot 更适合哪个池？ A: 可重试的 prefill 或 batch/offline，谨慎用于高 SLA decode。
 15. Q: 成本指标除 GPU utilization 外还看什么？ A: cost per 1k tokens、tokens/GPU-second、KV GB-seconds、batching efficiency。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

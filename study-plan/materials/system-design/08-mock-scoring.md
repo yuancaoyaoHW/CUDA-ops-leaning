@@ -336,3 +336,7 @@ CUDA:
 13. Q: conditional barrier 风险是什么? A: block 内不是所有线程到达 barrier 时 kernel 可能挂住。
 14. Q: 补课清单为什么写验收标准? A: 没有验收标准的问题无法衡量, 下次 mock 仍会重复。
 15. Q: checklist 什么时候填? A: mock 后立即填一次, 隔天复盘再填一次, 区分表达问题和知识问题。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

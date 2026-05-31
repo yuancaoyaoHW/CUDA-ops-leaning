@@ -337,3 +337,7 @@ class PrefixTree:
 13. Q: top-k sampling 如何优化复杂度? A: heap/select 找 top-k, 避免全量排序。
 14. Q: beam search 为什么用 log probability? A: 避免概率连乘 underflow, 方便累加比较。
 15. Q: prompt cache key 包含什么? A: token ids、模型版本、tokenizer 版本和 adapter/LoRA 标识。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

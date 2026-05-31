@@ -341,3 +341,7 @@ speedup ~= avg_accepted_tokens / verify_cost_multiplier
 13. Fusion 风险: register pressure, occupancy 降低, spill, shape 分支复杂。
 14. N-gram speculation: 用历史重复 n-gram 生成 draft, target model 验证。
 15. 训练-推理一体化: checkpoint, eval, serving artifact, canary, feedback, rollback。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

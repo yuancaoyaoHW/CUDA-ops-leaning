@@ -342,3 +342,7 @@ replicas = ceil(required_tokens_per_sec / measured_tokens_per_sec_per_replica)
 13. Q: Decode worker crash 后为什么难无缝恢复？ A: KV cache 和采样状态在 worker 本地，未 checkpoint 时需重算或返回 partial。
 14. Q: TTFT 高、TPOT 正常通常查什么？ A: queue wait、prefill tokens、chunk size、prefix cache、admission。
 15. Q: TPOT 高、TTFT 正常通常查什么？ A: decode batch、HBM bandwidth、KV blocks、NCCL、热点 priority 队列。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。

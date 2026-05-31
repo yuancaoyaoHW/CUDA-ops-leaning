@@ -333,3 +333,7 @@ ModelRunner 把 sequence metadata 转成模型 forward 需要的张量: input_id
 13. **PagedAttention block table 解决什么?** 逻辑 KV 位置到非连续物理 block 的映射。
 14. **copy-on-write 何时触发?** 共享 block ref_count > 1 且某 sequence 要写入该 block。
 15. **性能优化闭环是什么?** 明确 workload, profiling, 定位瓶颈, 单点优化, 正确性和性能验证。
+
+## 参考链接索引
+
+本文出现的项目、论文、技术报告和博客链接集中维护在 [09-reference-links.md](./09-reference-links.md)。
