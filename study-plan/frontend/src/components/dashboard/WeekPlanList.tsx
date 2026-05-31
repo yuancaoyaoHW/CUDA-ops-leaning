@@ -27,11 +27,7 @@ export function WeekPlanList({ weeks, currentWeek, onEditDay }: WeekPlanListProp
   return (
     <Accordion
       type="multiple"
-      defaultValue={
-        weeks.map((week) => `week-${week.num}`).includes(`week-${currentWeek}`)
-          ? [`week-${currentWeek}`]
-          : [`week-${weeks[0].num}`]
-      }
+      defaultValue={[]}
       className="rounded-lg border border-slate-200 bg-white shadow-sm"
     >
       {weeks.map((week) => {

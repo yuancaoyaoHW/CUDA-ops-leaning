@@ -29,6 +29,10 @@ test("renders week rows and edit action", async () => {
   render(<WeekPlanList weeks={weeks} currentWeek={1} onEditDay={onEditDay} />);
 
   expect(screen.getByText("Week 1")).toBeInTheDocument();
+
+  // Accordion starts collapsed — expand it
+  await userEvent.click(screen.getByText("Week 1"));
+
   expect(screen.getByText("Nsight setup")).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: /edit day 1/i }));

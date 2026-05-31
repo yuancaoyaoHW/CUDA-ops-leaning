@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Toaster, toast } from "sonner";
-import { getDashboard, saveDay, saveLibrary, saveOperator } from "@/api";
+import { getDashboard, saveDay, saveLibrary, saveOperator, addReference, updateReference, deleteReference } from "@/api";
 import { filterWeeks, currentWeek, type DashboardFilters } from "@/dashboardModel";
 import type { DashboardData } from "@/types";
 import { CurrentFocusPanel } from "./CurrentFocusPanel";
@@ -10,6 +10,7 @@ import { RisksTile, OperatorsTile, LibraryTile, TagCoverageTile } from "./Insigh
 import { LoadingState } from "./LoadingState";
 import { PlanFilters } from "./PlanFilters";
 import { KpiTile, DailyCheckTile } from "./ProgressOverview";
+import { ReferencesView } from "./ReferencesView";
 import { Sidebar, type View } from "./Sidebar";
 import { WeekPlanList } from "./WeekPlanList";
 
@@ -119,6 +120,29 @@ export function DashboardApp() {
           </div>
         )}
 
+        {view === "references" && (
+          <div className="max-w-3xl">
+            <ReferencesView
+              references={data.references || []}
+              onAdd={async (ref) => {
+                await addReference(ref);
+                await refresh();
+                toast.success("Reference added");
+              }}
+              onUpdate={async (ref) => {
+                await updateReference(ref);
+                await refresh();
+                toast.success("Reference updated");
+              }}
+              onDelete={async (id) => {
+                await deleteReference(id);
+                await refresh();
+                toast.success("Reference deleted");
+              }}
+            />
+          </div>
+        )}
+
         {view === "operators" && (
           <div className="max-w-2xl">
             <OperatorsTile
@@ -190,6 +214,8 @@ function viewDescription(view: View): string {
       return "当前焦点日和整体进度概览";
     case "plan":
       return "按周浏览和筛选所有计划日";
+    case "references":
+      return "参考资料、论文和学习链接";
     case "operators":
       return "Operator 成熟度和 artifact 覆盖";
     case "libraries":

@@ -1,4 +1,4 @@
-import type { DashboardData, DayUpdates, LibraryStatus, OperatorStatus } from "./types";
+import type { DashboardData, DayUpdates, LibraryStatus, OperatorStatus, Reference } from "./types";
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status?: number) {
@@ -54,4 +54,16 @@ export function saveLibrary(
   updates: { status?: LibraryStatus; evidence?: string[] },
 ): Promise<void> {
   return postJson("/api/library", { library, updates });
+}
+
+export function addReference(ref: Omit<Reference, "id">): Promise<void> {
+  return postJson("/api/reference", { action: "add", ...ref });
+}
+
+export function updateReference(ref: Reference): Promise<void> {
+  return postJson("/api/reference", { action: "update", ...ref });
+}
+
+export function deleteReference(id: string): Promise<void> {
+  return postJson("/api/reference", { action: "delete", id });
 }

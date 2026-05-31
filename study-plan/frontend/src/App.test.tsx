@@ -24,6 +24,7 @@ const dashboardPayload = {
   },
   current_day: null,
   risks: [],
+  references: [],
   options: {
     day_statuses: ["not_started", "in_progress", "done", "blocked", "skipped"],
     operator_statuses: ["not_started", "correctness_stage", "benchmark_stage", "profile_stage", "complete", "blocked"],

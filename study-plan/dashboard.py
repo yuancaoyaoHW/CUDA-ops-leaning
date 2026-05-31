@@ -235,6 +235,7 @@ def get_api_data() -> dict[str, Any]:
         "summary": summary(days),
         "current_day": current_day(days),
         "risks": risks(raw),
+        "references": raw.get("references", []),
         "options": {
             "day_statuses": STATUS_OPTIONS,
             "operator_statuses": OPERATOR_STATUS_OPTIONS,
@@ -324,6 +325,48 @@ def update_gpu_library(name: str, updates: dict[str, Any]) -> bool:
     return True
 
 
+def update_reference(payload: dict[str, Any]) -> bool:
+    import uuid
+
+    raw = load_progress()
+    refs: list[dict[str, Any]] = raw.get("references", [])
+    action = payload.get("action", "add")
+
+    if action == "add":
+        ref = {
+            "id": str(uuid.uuid4())[:8],
+            "title": str(payload["title"]),
+            "url": str(payload["url"]),
+            "category": str(payload.get("category", "other")),
+        }
+        if payload.get("notes"):
+            ref["notes"] = str(payload["notes"])
+        refs.append(ref)
+    elif action == "update":
+        ref_id = str(payload["id"])
+        for ref in refs:
+            if ref.get("id") == ref_id:
+                ref["title"] = str(payload.get("title", ref["title"]))
+                ref["url"] = str(payload.get("url", ref["url"]))
+                ref["category"] = str(payload.get("category", ref.get("category", "other")))
+                if payload.get("notes"):
+                    ref["notes"] = str(payload["notes"])
+                elif "notes" in ref and not payload.get("notes"):
+                    ref.pop("notes", None)
+                break
+        else:
+            return False
+    elif action == "delete":
+        ref_id = str(payload["id"])
+        refs = [r for r in refs if r.get("id") != ref_id]
+    else:
+        raise ValueError(f"unknown reference action: {action}")
+
+    raw["references"] = refs
+    save_progress(raw)
+    return True
+
+
 def cors_origin(origin: str | None) -> str | None:
     if not origin:
         return None
@@ -395,6 +438,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 ok = update_operator(str(payload["operator"]), payload["updates"])
             elif parsed.path == "/api/library":
                 ok = update_gpu_library(str(payload["library"]), payload["updates"])
+            elif parsed.path == "/api/reference":
+                ok = update_reference(payload)
             else:
                 json_response(self, {"ok": False, "error": "not found"}, code=404)
                 return

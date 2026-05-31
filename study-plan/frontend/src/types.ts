@@ -57,6 +57,14 @@ export interface Maturity {
   status: string;
 }
 
+export interface Reference {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+  notes?: string;
+}
+
 export interface DashboardData {
   meta: { title?: string; [key: string]: unknown };
   weeks: DashboardWeek[];
@@ -77,6 +85,7 @@ export interface DashboardData {
   };
   current_day: DashboardDay | null;
   risks: string[];
+  references: Reference[];
   options: {
     day_statuses: DayStatus[];
     operator_statuses: OperatorStatus[];
