@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { truthy } from "@/dashboardModel";
 import type { DashboardDay } from "@/types";
+import { GuidedChecklist } from "./GuidedChecklist";
 import { StatusBadge } from "./StatusBadge";
 
 function humanize(key: string): string {
@@ -58,10 +59,25 @@ export function CurrentFocusPanel({ day, onEditDay }: CurrentFocusPanelProps) {
         </div>
         <Progress value={day.completion_pct} aria-label="Current day progress" />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Checklist title="Tasks" items={day.tasks || {}} />
-          <Checklist title="Artifacts" items={day.artifacts || {}} />
-        </div>
+        {day.guide ? (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-600">预估总时间</p>
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                ~{day.guide.total_time_minutes}min
+              </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <GuidedChecklist title="Tasks" items={day.tasks || {}} guides={day.guide.tasks} />
+              <GuidedChecklist title="Artifacts" items={day.artifacts || {}} guides={day.guide.artifacts} />
+            </div>
+          </>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <Checklist title="Tasks" items={day.tasks || {}} />
+            <Checklist title="Artifacts" items={day.artifacts || {}} />
+          </div>
+        )}
 
         {(day.next_fix || day.weaknesses || day.verification || day.notes) ? (
           <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3">
