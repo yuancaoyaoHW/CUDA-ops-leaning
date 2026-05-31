@@ -1,0 +1,58 @@
+day: 1
+
+tasks:
+  audit_existing_kernels:
+    summary: 审计仓库中已有的 kernel 实现，梳理现有代码和测试覆盖
+    steps:
+      - 列出 kernels/ 目录下所有 .py 和 .cu 文件
+      - 对每个 kernel 检查是否有对应的 test_*.py 文件
+      - 检查每个 kernel 是否有 benchmark 脚本
+      - 将结果记录到 docs/kernel-audit.md（表格形式：kernel名/有无test/有无benchmark/状态）
+    done_when: docs/kernel-audit.md 存在，列出所有 kernel 的测试和 benchmark 覆盖状态
+    time_minutes: 30
+    depends_on: []
+    refs:
+      - title: 项目 kernels 目录
+        url: ./kernels/
+
+  map_operator_maturity:
+    summary: 梳理 operator 成熟度矩阵，对照 progress.yaml 中 operators 部分
+    steps:
+      - 打开 progress.yaml，找到 operators 部分
+      - 对每个 operator 检查其 artifacts（reference/implementation/tests/benchmark/profile/note）
+      - 对照实际文件确认 artifacts 状态是否准确
+      - 更新 progress.yaml 中不准确的 operator status
+    done_when: progress.yaml 中所有 operator 的 status 和 artifacts 反映真实文件状态
+    time_minutes: 25
+    depends_on: [audit_existing_kernels]
+    refs:
+      - title: progress.yaml operators 部分
+        url: ./progress.yaml
+
+  validate_ncu_wsl2:
+    summary: 验证 Nsight Compute 在 WSL2 下能采集硬件计数器
+    steps:
+      - 运行 ncu --version 确认安装版本
+      - 编译或找到一个简单 CUDA kernel（如 vectorAdd）
+      - 运行 ncu --set full -o test_profile ./vectorAdd
+      - 打开 .ncu-rep 文件，确认 sm__throughput.avg.pct_of_peak_sustained_elapsed 等硬件计数器有数据
+      - 如果失败，记录错误信息和可能的 workaround（如需要 --target-processes all）
+    done_when: ncu 能输出包含硬件计数器的 .ncu-rep 文件，或记录了明确的失败原因和 workaround
+    time_minutes: 40
+    depends_on: []
+    refs:
+      - title: Nsight Compute CLI 文档
+        url: https://docs.nvidia.com/nsight-compute/NsightComputeCli/
+      - title: WSL2 GPU 支持说明
+        url: https://docs.nvidia.com/cuda/wsl-user-guide/
+      - title: NCU WSL2 已知限制
+        url: https://developer.nvidia.com/nsight-compute
+
+artifacts:
+  docs:
+    summary: 产出当天的审计文档（kernel-audit.md）
+    done_when: docs/kernel-audit.md 存在且内容完整
+    time_minutes: 10
+    depends_on: [audit_existing_kernels, map_operator_maturity]
+
+total_time_minutes: 105

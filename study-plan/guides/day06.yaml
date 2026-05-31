@@ -1,0 +1,45 @@
+day: 6
+
+tasks:
+  closed_book_kernel:
+    summary: 不看参考代码，从零重写 softmax Triton kernel
+    steps:
+      - 创建 kernels/softmax/closed_book_softmax.py
+      - 凭记忆实现完整的 row_softmax kernel
+      - 运行已有的 test_softmax.py 验证正确性
+      - 记录卡住的地方和需要查阅的知识点
+    done_when: closed_book_softmax.py 通过所有已有测试
+    time_minutes: 35
+    depends_on: []
+
+  explain_masking:
+    summary: 用文字解释 softmax kernel 中 mask 的作用和实现
+    steps:
+      - 解释为什么需要 mask（BLOCK_SIZE 可能大于实际列数）
+      - 解释 tl.where(mask, x, float('-inf')) 的语义
+      - 解释如果不 mask 会发生什么（错误的 max/sum）
+      - 画出一个具体例子（N=5, BLOCK_SIZE=8）
+      - 写入 kernels/softmax/README.md 的 Masking 章节
+    done_when: README.md 有 Masking 章节，包含具体数值例子
+    time_minutes: 20
+    depends_on: [closed_book_kernel]
+
+  finalize_note:
+    summary: 整理 softmax 算子的完整技术笔记
+    steps:
+      - 合并 README.md 中的所有章节（寻址、性能、masking）
+      - 添加总结段落：这个 kernel 学到了什么
+      - 添加面试回答模板：如果被问到 "你实现过什么 CUDA kernel"
+      - 检查格式和可读性
+    done_when: kernels/softmax/README.md 是一份完整的技术笔记，可以直接用于面试准备
+    time_minutes: 20
+    depends_on: [closed_book_kernel, explain_masking]
+
+artifacts:
+  note:
+    summary: 完整的 softmax 技术笔记
+    done_when: kernels/softmax/README.md 完整且可读
+    time_minutes: 0
+    depends_on: [finalize_note]
+
+total_time_minutes: 75

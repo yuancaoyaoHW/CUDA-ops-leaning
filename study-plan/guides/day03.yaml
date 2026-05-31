@@ -1,0 +1,48 @@
+day: 3
+
+tasks:
+  aligned_tests:
+    summary: 编写对齐尺寸的 softmax 正确性测试
+    steps:
+      - 创建 kernels/softmax/test_softmax.py
+      - 用 pytest 参数化测试不同 (M, N) 组合：(1,128), (32,256), (64,1024), (128,4096)
+      - 对每组参数比较 triton_softmax 与 torch.softmax 的输出（atol=1e-5, rtol=1e-5）
+      - 测试 float32 和 float16 两种 dtype
+    done_when: pytest kernels/softmax/test_softmax.py::test_aligned -v 全部 PASS
+    time_minutes: 25
+    depends_on: []
+    refs:
+      - title: pytest parametrize 文档
+        url: https://docs.pytest.org/en/stable/how-to/parametrize.html
+
+  non_aligned_tests:
+    summary: 编写非对齐尺寸的 softmax 正确性测试（N 不是 2 的幂）
+    steps:
+      - 在 test_softmax.py 中添加 test_non_aligned
+      - 测试 N=33, 127, 1000, 3999 等非 2 幂尺寸
+      - 确认 tl.where mask 正确处理了 padding 区域
+      - 如果失败，修复 triton kernel 中的 mask 逻辑
+    done_when: pytest kernels/softmax/test_softmax.py::test_non_aligned -v 全部 PASS
+    time_minutes: 20
+    depends_on: [aligned_tests]
+
+  dtype_and_mask_tests:
+    summary: 编写 dtype 边界和 mask 相关测试
+    steps:
+      - 添加 test_large_values 测试极大值输入（不溢出）
+      - 添加 test_zero_row 测试全零行
+      - 添加 test_negative_row 测试全负值行
+      - 添加 test_single_element 测试 N=1 的边界情况
+      - 确认所有情况下输出行和为 1.0
+    done_when: pytest kernels/softmax/test_softmax.py -v 全部 PASS（包括边界测试）
+    time_minutes: 25
+    depends_on: [aligned_tests]
+
+artifacts:
+  tests:
+    summary: 完整的 softmax 测试文件
+    done_when: kernels/softmax/test_softmax.py 存在且 pytest 全部通过
+    time_minutes: 0
+    depends_on: [aligned_tests, non_aligned_tests, dtype_and_mask_tests]
+
+total_time_minutes: 70

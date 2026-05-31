@@ -1,0 +1,51 @@
+day: 4
+
+tasks:
+  write_benchmark:
+    summary: 编写 softmax benchmark 脚本，测量不同尺寸下的性能
+    steps:
+      - 创建 kernels/softmax/bench_softmax.py
+      - 使用 triton.testing.do_bench 测量 kernel 执行时间
+      - 参数化 M=[128,512,2048,8192] 和 N=[128,1024,4096,16384]
+      - 输出表格：M, N, triton_ms, torch_ms, speedup
+    done_when: python kernels/softmax/bench_softmax.py 输出完整的性能对比表格
+    time_minutes: 30
+    depends_on: []
+    refs:
+      - title: Triton benchmark 工具
+        url: https://triton-lang.org/main/python-api/generated/triton.testing.do_bench.html
+
+  compare_torch:
+    summary: 对比 Triton 实现与 PyTorch 原生 softmax 的性能
+    steps:
+      - 在 bench_softmax.py 中添加 torch.softmax 的 benchmark
+      - 计算 speedup = torch_ms / triton_ms
+      - 找出 Triton 比 PyTorch 快/慢的尺寸分界点
+      - 记录观察到的性能特征到 kernels/softmax/README.md
+    done_when: README.md 中有性能对比结论（哪些尺寸 Triton 更快，为什么）
+    time_minutes: 20
+    depends_on: [write_benchmark]
+
+  compute_gbs:
+    summary: 计算 softmax 的有效带宽（GB/s）
+    steps:
+      - softmax 的理论数据量 = 2 * M * N * sizeof(dtype)（读一次写一次）
+      - 计算 achieved_bandwidth = data_bytes / kernel_time
+      - 对比 GPU 的理论峰值带宽（查 nvidia-smi 或 deviceQuery）
+      - 计算带宽利用率 = achieved / peak * 100%
+      - 记录到 README.md
+    done_when: README.md 中有带宽利用率数据，能说明 kernel 是否 memory-bound
+    time_minutes: 20
+    depends_on: [write_benchmark]
+    refs:
+      - title: GPU 带宽计算方法
+        url: https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
+
+artifacts:
+  benchmark:
+    summary: benchmark 脚本和性能数据
+    done_when: kernels/softmax/bench_softmax.py 存在且能输出结果
+    time_minutes: 0
+    depends_on: [write_benchmark, compare_torch, compute_gbs]
+
+total_time_minutes: 70
