@@ -6,19 +6,58 @@ interface ProgressOverviewProps {
   summary: DashboardData["summary"];
 }
 
+/**
+ * Standalone KPI tile — renders a single metric as its own Card.
+ * Designed to be placed independently in a bento grid.
+ */
+export function KpiTile({ label, done, total }: { label: string; done: number; total: number }) {
+  const value = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-4">
+        <span className="text-xs text-slate-600">{label}</span>
+        <strong className="mt-1 block text-2xl font-semibold tabular-nums text-slate-950">
+          {done}/{total}
+        </strong>
+        <Progress value={value} className="mt-2 h-2" aria-label={`${label} progress`} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Standalone tile for the average daily check metric.
+ */
+export function DailyCheckTile({ value }: { value: number | null }) {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-4">
+        <span className="text-xs text-slate-600">Avg Daily Check</span>
+        <strong className="mt-1 block text-2xl font-semibold tabular-nums text-slate-950">
+          {value ?? "—"}
+        </strong>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Backward-compatible wrapper that renders all KPIs inside a single Card.
+ * Kept so existing consumers and tests continue to work unchanged.
+ */
 export function ProgressOverview({ summary }: ProgressOverviewProps) {
   return (
     <Card className="shadow-sm">
       <CardHeader>
         <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Overview</p>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <OverviewRow label="Days" done={summary.done_days} total={summary.total_days} />
-        <OverviewRow label="Tasks" done={summary.done_tasks} total={summary.total_tasks} />
-        <OverviewRow label="Artifacts" done={summary.done_artifacts} total={summary.total_artifacts} />
+      <CardContent className="grid grid-cols-2 gap-3">
+        <KpiTileInner label="Days" done={summary.done_days} total={summary.total_days} />
+        <KpiTileInner label="Tasks" done={summary.done_tasks} total={summary.total_tasks} />
+        <KpiTileInner label="Artifacts" done={summary.done_artifacts} total={summary.total_artifacts} />
         <div>
           <span className="text-xs text-slate-600">Avg Daily Check</span>
-          <strong className="block text-xl font-semibold tabular-nums text-slate-950">
+          <strong className="mt-1 block text-xl font-semibold tabular-nums text-slate-950">
             {summary.average_daily_check ?? "—"}
           </strong>
         </div>
@@ -27,15 +66,16 @@ export function ProgressOverview({ summary }: ProgressOverviewProps) {
   );
 }
 
-function OverviewRow({ label, done, total }: { label: string; done: number; total: number }) {
+// Internal version without Card wrapper for use inside ProgressOverview
+function KpiTileInner({ label, done, total }: { label: string; done: number; total: number }) {
   const value = total ? Math.round((done / total) * 100) : 0;
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs text-slate-600">{label}</span>
-        <strong className="tabular-nums text-slate-950">{done}/{total}</strong>
-      </div>
-      <Progress value={value} aria-label={`${label} progress`} />
+      <span className="text-xs text-slate-600">{label}</span>
+      <strong className="mt-1 block text-xl font-semibold tabular-nums text-slate-950">
+        {done}/{total}
+      </strong>
+      <Progress value={value} className="mt-2 h-2" aria-label={`${label} progress`} />
     </div>
   );
 }
