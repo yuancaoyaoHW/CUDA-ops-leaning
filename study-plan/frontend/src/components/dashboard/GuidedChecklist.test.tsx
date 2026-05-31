@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
 import { GuidedChecklist } from "./GuidedChecklist";
 import type { Checklist, TaskGuide } from "@/types";
@@ -22,27 +23,35 @@ const taskGuides: Record<string, TaskGuide> = {
   },
 };
 
-test("renders task summary and time badge", () => {
+test("renders task summary and time badge in collapsed state", () => {
   render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
 
   expect(screen.getByText("审计仓库中已有的 kernel 实现")).toBeInTheDocument();
-  expect(screen.getByText("~30min")).toBeInTheDocument();
+  expect(screen.getByText("30m")).toBeInTheDocument();
 });
 
-test("renders steps as ordered list", () => {
+test("renders steps after expanding", async () => {
   render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
+
+  // Steps hidden by default
+  expect(screen.queryByText("列出 kernels/ 目录")).not.toBeInTheDocument();
+
+  // Click to expand the audit item
+  await userEvent.click(screen.getByRole("button", { name: /Audit/i }));
 
   expect(screen.getByText("列出 kernels/ 目录")).toBeInTheDocument();
   expect(screen.getByText("检查 test 覆盖")).toBeInTheDocument();
 });
 
-test("renders done_when criteria", () => {
+test("renders done_when after expanding", async () => {
   render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
+
+  await userEvent.click(screen.getByRole("button", { name: /Audit/i }));
 
   expect(screen.getByText("docs/audit.md 存在")).toBeInTheDocument();
 });
 
-test("renders local refs as plain text, external refs as links", () => {
+test("renders local refs as plain text, external refs as links after expanding", async () => {
   const guidesWithExternal: Record<string, TaskGuide> = {
     audit: {
       ...taskGuides.audit,
@@ -56,6 +65,8 @@ test("renders local refs as plain text, external refs as links", () => {
     <GuidedChecklist title="Tasks" items={{ audit: false }} guides={guidesWithExternal} />,
   );
 
+  await userEvent.click(screen.getByRole("button", { name: /Audit/i }));
+
   // Local ref is NOT a link
   expect(screen.queryByRole("link", { name: "Kernels 目录" })).not.toBeInTheDocument();
   expect(screen.getByText("Kernels 目录")).toBeInTheDocument();
@@ -65,13 +76,21 @@ test("renders local refs as plain text, external refs as links", () => {
   expect(extLink).toHaveAttribute("href", "https://docs.nvidia.com/nsight-compute/");
 });
 
-test("shows dependency warning when prerequisite not done", () => {
+test("shows blocked badge when prerequisite not done", () => {
   render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
+
+  expect(screen.getByText("blocked")).toBeInTheDocument();
+});
+
+test("shows dependency detail after expanding blocked item", async () => {
+  render(<GuidedChecklist title="Tasks" items={tasks} guides={taskGuides} />);
+
+  await userEvent.click(screen.getByRole("button", { name: /Plan/i }));
 
   expect(screen.getByText(/需要先完成: Audit/)).toBeInTheDocument();
 });
 
-test("no dependency warning when prerequisite is done", () => {
+test("no blocked badge when prerequisite is done", () => {
   render(
     <GuidedChecklist
       title="Tasks"
@@ -80,12 +99,12 @@ test("no dependency warning when prerequisite is done", () => {
     />,
   );
 
-  expect(screen.queryByText(/需要先完成/)).not.toBeInTheDocument();
+  expect(screen.queryByText("blocked")).not.toBeInTheDocument();
 });
 
 test("falls back to simple list when no guides provided", () => {
   render(<GuidedChecklist title="Tasks" items={tasks} />);
 
   expect(screen.getByText("Audit")).toBeInTheDocument();
-  expect(screen.queryByText("~30min")).not.toBeInTheDocument();
+  expect(screen.queryByText("30m")).not.toBeInTheDocument();
 });

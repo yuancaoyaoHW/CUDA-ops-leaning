@@ -80,11 +80,11 @@ test("renders guided checklist when guide is present", () => {
   const dayWithGuide: DashboardDay = { ...day, guide: guideData };
   render(<CurrentFocusPanel day={dayWithGuide} onEditDay={() => undefined} />);
 
+  // Summary and time visible in collapsed state
   expect(screen.getByText("审计仓库中已有的 kernel 实现")).toBeInTheDocument();
-  expect(screen.getByText("~30min")).toBeInTheDocument();
-  expect(screen.getByText("列出 kernels/ 目录")).toBeInTheDocument();
-  expect(screen.getByText("docs/audit.md 存在")).toBeInTheDocument();
-  expect(screen.getByText("Kernels 目录")).toBeInTheDocument();
+  expect(screen.getByText("30m")).toBeInTheDocument();
+  // Steps are hidden until expanded
+  expect(screen.queryByText("列出 kernels/ 目录")).not.toBeInTheDocument();
 });
 
 test("renders total time estimate when guide is present", () => {

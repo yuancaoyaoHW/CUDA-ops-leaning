@@ -67,13 +67,13 @@ export function CurrentFocusPanel({ day, onEditDay }: CurrentFocusPanelProps) {
                 ~{day.guide.total_time_minutes}min
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-6">
               <GuidedChecklist title="Tasks" items={day.tasks || {}} guides={day.guide.tasks} />
               <GuidedChecklist title="Artifacts" items={day.artifacts || {}} guides={day.guide.artifacts} />
             </div>
           </>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6">
             <Checklist title="Tasks" items={day.tasks || {}} />
             <Checklist title="Artifacts" items={day.artifacts || {}} />
           </div>
