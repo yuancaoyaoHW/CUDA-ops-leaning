@@ -64,6 +64,12 @@ else
     echo ""
     echo "[6/6] CUDA extension:"
     if command -v nvcc &>/dev/null; then
+        # Use conda GCC 11 (system gcc may be too old for -std=c++20)
+        CONDA_ENV_PATH="$HOME/miniconda3/envs/${ENV_NAME}"
+        if [[ -x "$CONDA_ENV_PATH/bin/x86_64-conda-linux-gnu-gcc" ]]; then
+            export CC="$CONDA_ENV_PATH/bin/x86_64-conda-linux-gnu-gcc"
+            export CXX="$CONDA_ENV_PATH/bin/x86_64-conda-linux-gnu-g++"
+        fi
         "$PYTHON" "$SCRIPT_DIR/verify_cuda_ext.py"
     else
         echo "  SKIPPED: nvcc not found. Install CUDA toolkit:"
