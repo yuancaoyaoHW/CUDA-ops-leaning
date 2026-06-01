@@ -8,6 +8,7 @@ import { EditDrawer, type EditTarget } from "./EditDrawer";
 import { EmptyState } from "./EmptyState";
 import { RisksTile, OperatorsTile, LibraryTile, TagCoverageTile } from "./InsightTiles";
 import { LoadingState } from "./LoadingState";
+import { ModulesView } from "./ModulesView";
 import { PlanFilters } from "./PlanFilters";
 import { KpiTile, DailyCheckTile } from "./ProgressOverview";
 import { ReferencesView } from "./ReferencesView";
@@ -178,6 +179,12 @@ export function DashboardApp() {
             <TagCoverageTile tags={data.tag_coverage} />
           </div>
         )}
+
+        {view === "modules" && (
+          <div className="max-w-full">
+            <ModulesView />
+          </div>
+        )}
       </main>
 
       <EditDrawer
@@ -224,5 +231,7 @@ function viewDescription(view: View): string {
       return "高优先级风险项";
     case "tags":
       return "JD 标签覆盖率";
+    case "modules":
+      return "学习资料模块总览";
   }
 }

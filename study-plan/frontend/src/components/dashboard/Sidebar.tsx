@@ -1,7 +1,7 @@
-import { CalendarDays, ClipboardList, Cpu, LibraryBig, AlertTriangle, Tags, BookOpen, RefreshCw } from "lucide-react";
+import { CalendarDays, ClipboardList, Cpu, LibraryBig, AlertTriangle, Tags, BookOpen, FolderOpen, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type View = "focus" | "plan" | "operators" | "libraries" | "risks" | "tags" | "references";
+export type View = "focus" | "plan" | "operators" | "libraries" | "risks" | "tags" | "references" | "modules";
 
 interface SidebarProps {
   active: View;
@@ -17,6 +17,7 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: "libraries", label: "Libraries", icon: <LibraryBig className="h-5 w-5" /> },
   { id: "risks", label: "Risks", icon: <AlertTriangle className="h-5 w-5" /> },
   { id: "tags", label: "Tags", icon: <Tags className="h-5 w-5" /> },
+  { id: "modules", label: "Modules", icon: <FolderOpen className="h-5 w-5" /> },
 ];
 
 export function Sidebar({ active, onChange, onRefresh }: SidebarProps) {

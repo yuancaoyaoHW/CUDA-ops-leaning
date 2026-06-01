@@ -67,3 +67,26 @@ export function updateReference(ref: Reference): Promise<void> {
 export function deleteReference(id: string): Promise<void> {
   return postJson("/api/reference", { action: "delete", id });
 }
+
+export interface ModuleInfo {
+  name: string;
+  file_count: number;
+  files: string[];
+}
+
+export async function getModules(): Promise<ModuleInfo[]> {
+  const response = await fetch("/api/modules");
+  if (!response.ok) {
+    throw new ApiError(`Unable to load modules: HTTP ${response.status}`, response.status);
+  }
+  return response.json() as Promise<ModuleInfo[]>;
+}
+
+export async function getFileContent(path: string): Promise<string> {
+  const response = await fetch(`/api/file?path=${encodeURIComponent(path)}`);
+  if (!response.ok) {
+    throw new ApiError(`Unable to load file: HTTP ${response.status}`, response.status);
+  }
+  const data = await response.json();
+  return data.content as string;
+}

@@ -22,6 +22,7 @@ except ImportError:
 
 
 BASE_DIR = Path(__file__).parent
+REPO_ROOT = BASE_DIR.parent
 PROGRESS_FILE = BASE_DIR / "progress.yaml"
 OUTPUT_HTML = BASE_DIR / "dashboard.html"
 OUTPUT_FILE = OUTPUT_HTML  # alias for test compatibility
@@ -412,6 +413,41 @@ def cors_origin(origin: str | None) -> str | None:
     return None
 
 
+MODULE_DIRS = ["benchmarks", "evaluation", "interview", "plans", "projects", "third_round", "verification"]
+
+
+ALLOWED_EXTENSIONS = {".md", ".py", ".txt", ".csv", ".yaml", ".yml"}
+
+
+def get_modules_data() -> list[dict[str, Any]]:
+    modules = []
+    for name in MODULE_DIRS:
+        folder = REPO_ROOT / name
+        if not folder.is_dir():
+            continue
+        files = []
+        for f in sorted(folder.rglob("*")):
+            if f.is_file() and not f.name.startswith("."):
+                files.append(str(f.relative_to(folder)))
+        modules.append({"name": name, "file_count": len(files), "files": files})
+    return modules
+
+
+def get_file_content(rel_path: str) -> dict[str, str] | None:
+    if not rel_path or ".." in rel_path:
+        return None
+    target = (REPO_ROOT / rel_path).resolve()
+    if not target.is_file() or not str(target).startswith(str(REPO_ROOT.resolve())):
+        return None
+    if target.suffix.lower() not in ALLOWED_EXTENSIONS:
+        return None
+    try:
+        content = target.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    return {"path": rel_path, "content": content}
+
+
 def json_response(handler: SimpleHTTPRequestHandler, payload: Any, code: int = 200) -> None:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     handler.send_response(code)
@@ -446,6 +482,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/progress":
             json_response(self, get_api_data())
+            return
+        if parsed.path == "/api/modules":
+            json_response(self, get_modules_data())
+            return
+        if parsed.path == "/api/file":
+            from urllib.parse import parse_qs
+            params = parse_qs(parsed.query)
+            file_path = params.get("path", [""])[0]
+            result = get_file_content(file_path)
+            if result is None:
+                json_response(self, {"error": "file not found or not allowed"}, code=404)
+            else:
+                json_response(self, result)
             return
         if parsed.path in ("/", "/dashboard.html"):
             body = render_dashboard().encode("utf-8")
