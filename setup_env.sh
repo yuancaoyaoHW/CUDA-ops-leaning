@@ -241,6 +241,17 @@ setup_kernel_env() {
     conda env create -f "$PROJECT_DIR/environment.yml"
   fi
 
+  # Install GCC 11 via conda (不替换全局 gcc，仅在此环境内生效)
+  info "Installing GCC 11 via conda (isolated, no global change)..."
+  conda install -n "$ENV_NAME" -c conda-forge gxx_linux-64=11 -y -q
+
+  # 设置编译器环境变量，供 PyTorch cpp_extension 使用
+  local CONDA_ENV_PATH
+  CONDA_ENV_PATH=$(conda run -n "$ENV_NAME" python -c "import sys; print(sys.prefix)")
+  conda env config vars set -n "$ENV_NAME" \
+    CC="$CONDA_ENV_PATH/bin/x86_64-conda-linux-gnu-gcc" \
+    CXX="$CONDA_ENV_PATH/bin/x86_64-conda-linux-gnu-g++"
+
   # Install PyTorch + Triton + dev packages
   info "Installing/updating PyTorch + Triton + dev packages..."
   local PYTORCH_CUDA_INDEX_URL="https://download.pytorch.org/whl/cu126"
@@ -363,31 +374,10 @@ final_verification() {
     bash "$PROJECT_DIR/scripts/04_verify_all.sh" || true
   fi
 
-  # Quick smoke test
+  # Quick smoke test (must use .py file — triton.jit needs inspect.getsource)
   info "Running smoke test..."
-  conda run -n "$ENV_NAME" python -c "
-import torch
-import triton
-import triton.language as tl
-
-# Minimal Triton kernel test
-@triton.jit
-def _add_kernel(x_ptr, y_ptr, out_ptr, n, BLOCK: tl.constexpr):
-    pid = tl.program_id(0)
-    offs = pid * BLOCK + tl.arange(0, BLOCK)
-    mask = offs < n
-    x = tl.load(x_ptr + offs, mask=mask)
-    y = tl.load(y_ptr + offs, mask=mask)
-    tl.store(out_ptr + offs, x + y, mask=mask)
-
-n = 1024
-x = torch.randn(n, device='cuda')
-y = torch.randn(n, device='cuda')
-out = torch.empty(n, device='cuda')
-_add_kernel[(n // 256,)](x, y, out, n, BLOCK=256)
-assert torch.allclose(out, x + y), 'Triton kernel test failed!'
-print('  ✓ Triton kernel smoke test passed')
-" && info "Smoke test passed" || { error "Smoke test failed"; all_pass=false; }
+  conda run -n "$ENV_NAME" python "$PROJECT_DIR/scripts/smoke_test_triton.py" \
+    && info "Smoke test passed" || { error "Smoke test failed"; all_pass=false; }
 
   echo ""
   if $all_pass; then
