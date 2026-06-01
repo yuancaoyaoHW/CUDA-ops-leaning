@@ -38,7 +38,10 @@ printf 'Using PyTorch CUDA wheel index: %s\n' "$PYTORCH_CUDA_INDEX_URL"
 #   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 # Keep inference-framework packages in separate envs; this script installs only operator-dev tooling.
 conda run -n "$ENV_NAME" python -m pip install --upgrade pip setuptools wheel
-conda run -n "$ENV_NAME" python -m pip install --index-url "$PYTORCH_CUDA_INDEX_URL" torch torchvision torchaudio
+conda run -n "$ENV_NAME" python -m pip install \
+  --trusted-host download.pytorch.org \
+  --index-url "$PYTORCH_CUDA_INDEX_URL" \
+  torch torchvision torchaudio
 conda run -n "$ENV_NAME" python -m pip install "${OP_DEV_PACKAGES[@]}"
 
 printf '\nInstalled package versions:\n'
