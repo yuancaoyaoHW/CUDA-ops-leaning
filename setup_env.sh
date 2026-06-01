@@ -252,6 +252,7 @@ setup_kernel_env() {
   conda run -n "$ENV_NAME" python -m pip install --upgrade pip setuptools wheel -q
   conda run -n "$ENV_NAME" python -m pip install \
     --trusted-host download.pytorch.org \
+    --trusted-host download-r2.pytorch.org \
     --index-url "$PYTORCH_CUDA_INDEX_URL" \
     torch torchvision torchaudio -q
   conda run -n "$ENV_NAME" python -m pip install "${DEV_PACKAGES[@]}" -q

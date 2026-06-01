@@ -40,6 +40,7 @@ printf 'Using PyTorch CUDA wheel index: %s\n' "$PYTORCH_CUDA_INDEX_URL"
 conda run -n "$ENV_NAME" python -m pip install --upgrade pip setuptools wheel
 conda run -n "$ENV_NAME" python -m pip install \
   --trusted-host download.pytorch.org \
+  --trusted-host download-r2.pytorch.org \
   --index-url "$PYTORCH_CUDA_INDEX_URL" \
   torch torchvision torchaudio
 conda run -n "$ENV_NAME" python -m pip install "${OP_DEV_PACKAGES[@]}"
